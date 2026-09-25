@@ -11,6 +11,16 @@ Windows / Linux 開源 WebDAV 備份伺服器，提供管理網頁、帳號與�
 - v0.3.13 新增區網 mDNS 探索公告，詳見 [LAN_DISCOVERY](docs/LAN_DISCOVERY.md)。
 - [驗證與限制](VALIDATION.md)：Windows 測試已執行；本版 Linux 成品為交叉編譯，尚未完成本版 Linux runtime、ARM64 實機及安裝升級驗證。
 
+## 授權
+
+Copyright (c) 2026 SpeedBackup contributors.
+
+本專案自有程式碼採用 **GNU General Public License v3.0 only（SPDX: GPL-3.0-only）**，完整條款見 [LICENSE](LICENSE)，授權文字與 [YAWAsau/backup_script](https://github.com/YAWAsau/backup_script/blob/master/LICENSE) 相同。
+
+程式不提供任何擔保；使用、修改及散布須遵守 GPL-3.0。第三方依賴保留其原有授權及著作權聲明，詳見 [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) 與 vendor 內各依賴的 LICENSE。
+
+`v0.3.13-webdav14-gpl3` 為授權更新版，功能與程式版本仍為 v0.3.13-webdav14；同一 Release 提供完整對應原始碼。先前 MIT 發布版本與既有授權保留於歷史紀錄。
+
 ## 終端即時監看（watch）
 
 已自啟動的服務直接用 `watch` 連接，不要再啟動第二份 `serve`：

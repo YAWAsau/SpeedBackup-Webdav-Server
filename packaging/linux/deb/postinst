@@ -1,0 +1,43 @@
+#!/bin/sh
+set -e
+
+if ! getent group speedbackup >/dev/null 2>&1; then
+  addgroup --system speedbackup >/dev/null
+fi
+if ! getent passwd speedbackup >/dev/null 2>&1; then
+  adduser --system --ingroup speedbackup --home /var/lib/speedbackup-server --no-create-home --shell /usr/sbin/nologin speedbackup >/dev/null
+fi
+
+install -d -o speedbackup -g speedbackup -m 0750 /var/lib/speedbackup-server
+install -d -o speedbackup -g speedbackup -m 0750 /var/lib/speedbackup-server/data
+install -d -o root -g speedbackup -m 0750 /etc/speedbackup-server
+if [ -f /etc/speedbackup-server/server.env ]; then
+  chown root:speedbackup /etc/speedbackup-server/server.env
+  chmod 0640 /etc/speedbackup-server/server.env
+fi
+
+CONFIG_DIR=/var/lib/speedbackup-server/data/.speedbackup-server/config
+TOKEN_FILE=/var/lib/speedbackup-server/FIRST_RUN_TOKEN.txt
+if [ ! -d "$CONFIG_DIR" ] || ! find "$CONFIG_DIR" -maxdepth 1 -type f -name '*.json' -print -quit 2>/dev/null | grep -q .; then
+  # Provision the token under the same root lock as the auth configuration.
+  # Never parse a human message or overwrite a preexisting operator token.
+  su -s /bin/sh speedbackup -c '/usr/bin/speedbackup-server init --root /var/lib/speedbackup-server/data --token-file /var/lib/speedbackup-server/FIRST_RUN_TOKEN.txt' >/dev/null
+  chown root:root "$TOKEN_FILE"
+  chmod 0600 "$TOKEN_FILE"
+  echo "SpeedBackup WebAdmin: use localhost or SSH localhost forwarding to create the administrator at /web/admin."
+  echo "Legacy API token retained at $TOKEN_FILE; not required for WebAdmin login."
+fi
+
+if [ -d /run/systemd/system ]; then
+  systemctl daemon-reload
+  if [ -z "${2:-}" ]; then
+    systemctl enable speedbackup-server.service >/dev/null
+  fi
+  # Respect an administrator's package-start policy (for example chroots).
+  if command -v deb-systemd-invoke >/dev/null 2>&1; then
+    deb-systemd-invoke restart speedbackup-server.service
+  else
+    systemctl restart speedbackup-server.service
+  fi
+fi
+exit 0

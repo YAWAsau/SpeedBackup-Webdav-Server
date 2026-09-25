@@ -1,0 +1,12 @@
+[Unit]
+Description=SpeedBackup local boot-policy control
+PartOf=speedbackup-server.service
+
+[Socket]
+ListenStream=/run/speedbackup-server-autostart.sock
+SocketUser=root
+SocketGroup=speedbackup
+SocketMode=0660
+Accept=yes
+MaxConnections=4
+RemoveOnStop=true

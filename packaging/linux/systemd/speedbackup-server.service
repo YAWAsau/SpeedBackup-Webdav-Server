@@ -1,0 +1,29 @@
+[Unit]
+Description=SpeedBackup Server
+After=network-online.target speedbackup-server-autostart.socket
+Wants=network-online.target speedbackup-server-autostart.socket
+
+[Service]
+Type=notify
+NotifyAccess=main
+TimeoutStartSec=30s
+User=speedbackup
+Group=speedbackup
+EnvironmentFile=-/etc/speedbackup-server/server.env
+ExecStart=/usr/bin/speedbackup-server serve --root ${SPEEDBACKUP_ROOT} --listen ${SPEEDBACKUP_LISTEN}
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

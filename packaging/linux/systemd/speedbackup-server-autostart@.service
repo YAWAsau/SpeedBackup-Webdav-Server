@@ -1,0 +1,25 @@
+[Unit]
+Description=SpeedBackup restricted boot-policy request
+PartOf=speedbackup-server.service
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/speedbackup-server service autostart-agent
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+User=root
+Group=root
+RuntimeMaxSec=12s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/etc/systemd/system
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX
+RestrictSUIDSGID=true
+LockPersonality=true
+UMask=0077

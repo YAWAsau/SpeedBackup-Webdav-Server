@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8"><title>WebDAV monitor regression</title><link rel="stylesheet" href="styles.css">
+<h1>WebDAV monitor DOM regression</h1><pre id="result">RUNNING</pre><div id="stats"></div><div id="transfers"></div>
+<script src="dav_monitor.js"></script>
+<script>
+(async()=>{try{
+ const assert=(ok,message)=>{if(!ok)throw new Error(message);},paint=()=>new Promise(requestAnimationFrame);
+ const stats=document.getElementById('stats'),transfers=document.getElementById('transfers');
+ const view=SBDAVMonitor.create({stats,transfers,say:x=>x,formatBytes:x=>x+' B',formatDuration:x=>Math.floor(x)+'s'});
+ const records=Array.from({length:200},(_,id)=>({id,username:'test',operation:'PUT',backup:'Backup_zstd_0',app:'App '+id,file:'user.tar.zst',bytes:1024,expected:1024,started_ms:1000,ended_ms:2000,state:'transfer_complete'}));
+ view.update(records,3000);await paint();
+ const rows=Array.from(transfers.querySelectorAll('.dav-transfer-row'));
+ assert(rows.length<=13,'virtual row limit failed');
+ view.update(records,4000);await paint();assert(rows.every((row,i)=>transfers.querySelectorAll('.dav-transfer-row')[i]===row),'row nodes recreated');
+ const live={...records[0],id:201,state:'transferring',ended_ms:0,expected:-1,bytes:512};
+ view.update([live,...records],4000);await paint();
+ assert(transfers.querySelector('.dav-transfer-row').textContent.includes('總大小尚未確定'),'unknown total missing');
+ const viewport=transfers.querySelector('.dav-transfer-scroll');viewport.scrollTop=880;viewport.dispatchEvent(new Event('scroll'));await paint();
+ const anchorBefore=records[9].id;
+ view.update([{...live,bytes:768},...records],5000,{active:1,upload_bytes:777,download_bytes:0,failed:0,completed:200});
+ assert(stats.textContent.includes('777 B'),'statistics frozen during scroll');
+ const added={...live,id:202};view.update([added,live,...records],5100);await new Promise(r=>setTimeout(r,220));await paint();
+ const anchorIndex=Math.floor(viewport.scrollTop/88);
+ assert([added,live,...records][anchorIndex].id===anchorBefore,'historical scroll anchor jumped');
+ viewport.scrollTop=0;viewport.dispatchEvent(new Event('scroll'));await new Promise(r=>setTimeout(r,220));
+ view.update([{...live,ended_ms:6000,state:'transfer_complete'}],6000);await paint();
+ const row=transfers.querySelector('.dav-transfer-row');assert(row.textContent.includes('實際大小')&&!row.textContent.includes('總大小尚未確定'),'finished stream still unknown');
+ view.update([{...records[0],file:'<img src=x onerror=alert(1)>'}],7000);await paint();assert(!transfers.querySelector('img'),'unescaped file name');
+ view.update([],8000);assert(!transfers.querySelector('.empty').hidden,'empty state missing');
+ view.error('temporary network error');assert(transfers.querySelector('[role=status]').textContent.includes('更新中斷'),'stale state not identified');
+ view.destroy();document.getElementById('result').textContent=JSON.stringify({status:'PASS',retained_records:200,max_dom_rows:transfers.querySelectorAll('.dav-transfer-row').length,row_nodes_reused:true,stats_update_during_scroll:true,anchor_preserved:true,unknown_and_completed_sizes:true,xss_escaped:true,empty_and_error_states:true});
+}catch(error){document.getElementById('result').textContent='FAIL: '+error.stack;}})();
+</script>

@@ -1,0 +1,6 @@
+/dist/
+/.build/
+/evidence/
+*.log
+*.test
+FIRST_RUN_TOKEN.txt

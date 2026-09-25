@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>SpeedBackup Server</title>
+  <link rel="icon" href="/web/admin/server-mark.svg" type="image/svg+xml">
+  <script src="/web/admin/preferences.js"></script>
+  <script src="/web/admin/request.js"></script>
+  <link rel="stylesheet" href="/web/admin/styles.css">
+</head>
+<body>
+  <div id="loginView" class="login-shell">
+    <div class="login-card">
+      <img class="brand-mark" src="/web/admin/server-mark.svg" alt="SpeedBackup Server">
+      <h1>SpeedBackup Server</h1>
+      <p class="muted" data-i18n="login_hint"></p>
+      <h2 id="loginTitle"></h2>
+      <label class="field-label" for="adminUser" data-i18n="admin_user"></label>
+      <input id="adminUser" class="input" autocomplete="username" maxlength="48" spellcheck="false">
+      <label class="field-label" for="adminPassword" data-i18n="admin_password"></label>
+      <input id="adminPassword" class="input" type="password" autocomplete="current-password">
+      <div id="confirmPasswordField" class="hidden"><label class="field-label" for="adminConfirm" data-i18n="confirm_password"></label><input id="adminConfirm" class="input" type="password" autocomplete="new-password"></div>
+      <button id="loginBtn" class="btn primary wide" data-i18n="login"></button>
+      <div id="loginError" class="alert error hidden"></div>
+      <div class="login-footer">
+        <button class="link-btn locale-btn" data-locale="zh-TW">繁體中文</button>
+        <span>·</span>
+        <button class="link-btn locale-btn" data-locale="zh-CN">简体中文</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="appView" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand-row">
+        <img class="brand-mark small" src="/web/admin/server-mark.svg" alt="">
+        <div><strong>SpeedBackup</strong><div class="tiny muted">Server WebAdmin</div></div>
+      </div>
+      <nav id="nav">
+        <button class="nav-item active" data-page="webdav"><span>⇄</span><span data-i18n="webdav"></span></button>
+        <button class="nav-item" data-page="dashboard"><span>◫</span><span data-i18n="dashboard"></span></button>
+        <button class="nav-item" data-page="profiles"><span>▦</span><span data-i18n="profiles"></span></button>
+        <button class="nav-item" data-page="sessions"><span>⇅</span><span data-i18n="sessions"></span></button>
+        <button class="nav-item" data-page="events"><span>⌁</span><span data-i18n="events"></span></button>
+        <button class="nav-item" data-page="settings"><span>⚙</span><span data-i18n="settings"></span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div id="serverBadge" class="status-chip"><span class="dot ok"></span><span data-i18n="connected"></span></div>
+        <button id="logoutBtn" class="btn ghost wide" data-i18n="logout"></button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle"></h2>
+          <div id="pageSubtitle" class="muted"></div>
+        </div>
+        <div class="top-actions">
+          <button id="refreshBtn" class="btn ghost" data-i18n="refresh"></button>
+          <select id="localeSelect" class="select compact" aria-label="language">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+          </select>
+        </div>
+      </header>
+      <section id="content" class="content"></section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/web/admin/dav_config.js" defer></script>
+  <script src="/web/admin/dav_monitor.js" defer></script>
+  <script src="/web/admin/dav_editor.js" defer></script>
+  <script src="/web/admin/app.js" defer></script>
+</body>
+</html>

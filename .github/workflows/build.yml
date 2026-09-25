@@ -1,0 +1,51 @@
+name: Build and test
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: go test ./...
+      - run: go test -race ./...
+      - run: go vet ./...
+      - run: for test in scripts/test_*.cjs; do node "$test" || exit; done
+      - run: bash ./build_linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-binaries
+          path: dist/linux-*/speedbackup-server
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: go test ./...
+      - run: go vet ./...
+      - shell: pwsh
+        run: |
+          Get-ChildItem scripts/test_*.cjs | ForEach-Object {
+            node $_.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - run: choco install innosetup -y --no-progress
+      - shell: pwsh
+        run: ./build_windows.ps1 -RequireInstaller
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-binaries
+          path: |
+            dist/windows-amd64/*.exe
+            dist/windows-setup/*.exe

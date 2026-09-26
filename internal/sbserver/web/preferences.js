@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
-  const choices={theme:['system','dark','black','white'],accent:['blue','teal','violet'],density:['comfortable','compact'],motion:['system','reduce']};
-  const defaults={theme:'system',accent:'blue',density:'comfortable',motion:'system'};
+  const choices={theme:['system','dark','black','white'],accent:['blue','teal','violet'],density:['comfortable','compact'],motion:['system','reduce'],surface:['classic','glass']};
+  const defaults={theme:'system',accent:'blue',density:'comfortable',motion:'system',surface:'classic'};
   const read=(key)=>{try{return localStorage.getItem(key);}catch(_){return null;}};
   let current={...defaults,theme:read('sb_theme')||'system'};
   try{Object.assign(current,JSON.parse(read('sb_appearance')||'{}'));}catch(_){}

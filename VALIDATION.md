@@ -15,3 +15,12 @@ GPL-3.0-only applies to project code; third-party dependency notices remain unch
 - Theme switching and persistence checked using an isolated Windows executable.
 - Windows tests/vet and JavaScript regressions rerun for release; Windows/Linux amd64/arm64 binaries rebuilt.
 - Linux runtime results above belong to webdav15; no new Linux runtime, ARM64 hardware or installer upgrade testing for this theme-only change.
+
+
+## v0.3.16-webdav17 glass UI
+- User accepted glass8; release uses the same UI with a stable version number.
+- All Windows Go tests/vet and JavaScript regressions rerun; Windows/Linux amd64/arm64 rebuilt.
+- Isolated built Windows server: 4 themes x 4 pages, aligned sidebar labels, regular font weights, appearance buttons and keyboard activation, persistence, and mobile theme switching. Chrome reported OPPO Sans 4.0 Regular as the actual rendered custom font.
+- Bundled font bytes checked against the official ZIP; font HTTP MIME, cache policy and SHA256 verified.
+- Unified dashboard transfer fixture: 24 MiB SHA256 passed, progress median 53ms, no unchanged-history DOM mutations. Measurements are headless Chrome, not physical-phone GPU performance.
+- ARM64 hardware and installer upgrade are not tested in this release. Linux runtime verification is provided by GitHub Actions before delivery.

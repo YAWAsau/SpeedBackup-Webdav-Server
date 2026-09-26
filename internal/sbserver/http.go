@@ -102,6 +102,8 @@ func (s *HTTPServer) routes() http.Handler {
 	public.HandleFunc("GET /web/admin/request.js", s.webAsset("web/request.js"))
 	public.HandleFunc("GET /web/admin/dav_editor.js", s.webAsset("web/dav_editor.js"))
 	public.HandleFunc("GET /web/admin/styles.css", s.webAsset("web/styles.css"))
+	public.HandleFunc("GET /web/admin/oppo-sans-4-6c7d5864c661.ttf", s.webAsset("web/oppo-sans-4-6c7d5864c661.ttf"))
+	public.HandleFunc("GET /web/admin/OPPO-Sans-LICENSE.txt", s.webAsset("web/OPPO-Sans-LICENSE.txt"))
 	public.HandleFunc("GET /web/admin/server-mark.svg", s.webAsset("web/server-mark.svg"))
 	public.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
@@ -984,7 +986,12 @@ func (s *HTTPServer) serveWebFile(w http.ResponseWriter, name string) {
 	if ct := mime.TypeByExtension(filepath.Ext(name)); ct != "" {
 		w.Header().Set("Content-Type", ct)
 	}
-	w.Header().Set("Cache-Control", "no-cache")
+	if name == "web/oppo-sans-4-6c7d5864c661.ttf" {
+		w.Header().Set("Content-Type", "font/ttf")
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
 }

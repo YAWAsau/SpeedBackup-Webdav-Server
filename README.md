@@ -256,3 +256,12 @@ speedbackup-server debug-export --root "服務資料目錄" --output "speedbacku
 登入後預設開啟儀表板；即時傳輸只保留一處。「分享與備份 → 管理分享」保留帳號、目錄及連線設定。移除重複的備份與恢復、傳輸工作階段側欄項目。
 
 傳輸中取樣 50ms，進度條平滑過渡至已收到的數值，不推測未傳輸的 bytes。開啟減少動畫時不使用過渡。只有進度變動時傳送 active delta；開始／完成／失敗、重連與首次讀取傳回完整最近 200 筆紀錄。舊 API 呼叫保留完整回應；閒置維持 25 秒長輪詢，背景頁面停止監看。
+
+
+## 液態玻璃與字型
+在「設定 → 介面材質」選擇液態玻璃；預設保留經典。四種主題均支援透光表面，選擇經典可關閉效果。支援減少動畫及瀏覽器的減少透明度／高對比降級。
+
+介面內附未修改的 OPPO Sans 4.0，統一 Regular 字重。首次載入字型約 23 MB，後續使用長效快取。Copyright 2024 Guangdong OPPO Mobile Telecommunications Corp., Ltd.
+專案程式碼採 GPL-3.0-only；字型適用其獨立 OPPO Sans Fonts License Agreement，詳見 `internal/sbserver/web/OPPO-Sans-LICENSE.txt` 及 `THIRD_PARTY_NOTICES.txt`。官方原始字型來源：https://www.coloros.com/article/A00000074/ 。字型不可修改或獨立散布，隨附授權允許與軟體一同嵌入及散布。
+
+瀏覽器測試依賴：`npm ci`，再執行 `npx playwright install chromium`（Linux CI 使用 `--with-deps`）。

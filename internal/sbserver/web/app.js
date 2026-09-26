@@ -109,13 +109,13 @@
     const [,dav]=await Promise.all([refreshCore(),api('/api/v1/admin/webdav')]);
     if(generation!==davGeneration)return;
     const users=dav.users||[];
-    $('content').innerHTML=davMonitorMarkup()+`<div class="grid two dav-gap">
+    $('content').innerHTML='<div class="section pad dashboard-panel">'+davMonitorMarkup()+`<div class="grid two dashboard-details">
       <div class="section pad"><h3>${t('server_info')}</h3><div class="kv">
         <div>${t('uptime')}</div><div>${formatDuration(S.status.uptime_seconds)}</div>
         <div>${t('version')}</div><div>${esc(S.status.version)}</div>
         <div>${t('listen')}</div><div class="mono">${esc(S.status.listen)}</div>
         <div>${say('服務資料目錄','服务数据目录')}</div><div class="mono">${esc(S.status.root)}</div>
-      </div></div><div class="section pad"><h3>${say('WebDAV 分享','WebDAV 共享')}</h3><div class="stat-value">${users.filter(x=>!x.disabled).length}</div><p class="muted">${say('已啟用的分享；檔案存放於各分享目錄。','已启用的共享；文件存放在各共享目录。')}</p><button id="dashboardShares" class="btn ghost">${say('查看分享與備份','查看共享与备份')}</button><p class="tiny muted">${say('上方顯示實際傳輸量，不代表磁碟已佔用容量。','上方显示实际传输量，不代表磁盘已占用容量。')}</p></div></div>`;
+      </div></div><div class="section pad"><h3>${say('WebDAV 分享','WebDAV 共享')}</h3><div class="stat-value">${users.filter(x=>!x.disabled).length}</div><p class="muted">${say('已啟用的分享；檔案存放於各分享目錄。','已启用的共享；文件存放在各共享目录。')}</p><button id="dashboardShares" class="btn ghost">${say('查看分享與備份','查看共享与备份')}</button><p class="tiny muted">${say('上方顯示實際傳輸量，不代表磁碟已佔用容量。','上方显示实际传输量，不代表磁盘已占用容量。')}</p></div></div></div>`;
     $('dashboardShares').onclick=()=>setPage('profiles');
     await startDAVMonitor('dashboard',generation);
   }
@@ -149,23 +149,32 @@
   async function renderSettings(){
     const generation=davGeneration;
     await refreshCore();if(generation!==davGeneration)return;const cn=S.locale==='zh-CN';const say=(tw,sc)=>cn?sc:tw;
-    $('content').innerHTML=`<div class="grid two"><div class="settings-stack"><div class="section pad"><h3>${t('language')}</h3><select id="settingsLocale" class="select"><option value="zh-TW">繁體中文</option><option value="zh-CN">简体中文</option></select><label class="field-label" for="settingsTheme">${say('主題','主题')}</label><select id="settingsTheme" class="select"><option value="system">${say('跟隨系統','跟随系统')}</option><option value="dark">${say('深色','深色')}</option><option value="black">${say('深黑','深黑')}</option><option value="white">${say('白色','白色')}</option></select></div><div class="section pad"><h3>${say('開機自動啟動','开机自动启动')}</h3><p id="autostartStatus" role="status">${say('正在讀取系統狀態…','正在读取系统状态…')}</p><label><input type="checkbox" id="autostartEnabled" disabled> ${say('開機時啟動伺服器','开机时启动服务器')}</label><p class="muted">${say('只影響下次開機，目前服務與傳輸會繼續運作。','只影响下次开机，当前服务与传输会继续运行。')}</p></div><div class="section pad"><h3>${say('從手機管理','从手机管理')}</h3><div id="adminLANLinks"></div></div></div><div class="section pad"><h3>${say('修改管理員密碼','修改管理员密码')}</h3><label class="field-label" for="currentAdminPassword">${say('目前密碼','当前密码')}</label><input id="currentAdminPassword" type="password" class="input" autocomplete="current-password"><label class="field-label" for="newAdminPassword">${say('新密碼','新密码')}</label><input id="newAdminPassword" type="password" class="input" autocomplete="new-password"><label class="field-label" for="confirmAdminPassword">${t('confirm_password')}</label><input id="confirmAdminPassword" type="password" class="input" autocomplete="new-password"><button id="changeAdminPassword" class="btn primary dav-gap">${say('更新密碼並重新登入','更新密码并重新登录')}</button><p id="passwordResult" role="status"></p></div></div><div class="section pad dav-gap"><p>${say('忘記密碼：在伺服器停止服務後，使用 admin-reset --password-stdin 重設，再啟動服務。備份帳號及檔案不受影響。','忘记密码：在服务器停止服务后，使用 admin-reset --password-stdin 重置，再启动服务。备份账号及文件不受影响。')}</p><div class="kv"><div>${t('version')}</div><div>${esc(S.status.version)}</div><div>${t('root')}</div><div class="mono">${esc(S.status.root)}</div></div></div>`;
+    $('content').innerHTML=`<div class="grid two"><div class="settings-stack"><div class="section pad"><h3>${t('language')}</h3><select id="settingsLocale" class="select"><option value="zh-TW">繁體中文</option><option value="zh-CN">简体中文</option></select><div class="field-label" id="settingsThemeLabel">${say('主題','主题')}</div></div><div class="section pad"><h3>${say('開機自動啟動','开机自动启动')}</h3><p id="autostartStatus" role="status">${say('正在讀取系統狀態…','正在读取系统状态…')}</p><label><input type="checkbox" id="autostartEnabled" disabled> ${say('開機時啟動伺服器','开机时启动服务器')}</label><p class="muted">${say('只影響下次開機，目前服務與傳輸會繼續運作。','只影响下次开机，当前服务与传输会继续运行。')}</p></div><div class="section pad"><h3>${say('從手機管理','从手机管理')}</h3><div id="adminLANLinks"></div></div></div><div class="section pad"><h3>${say('修改管理員密碼','修改管理员密码')}</h3><label class="field-label" for="currentAdminPassword">${say('目前密碼','当前密码')}</label><input id="currentAdminPassword" type="password" class="input" autocomplete="current-password"><label class="field-label" for="newAdminPassword">${say('新密碼','新密码')}</label><input id="newAdminPassword" type="password" class="input" autocomplete="new-password"><label class="field-label" for="confirmAdminPassword">${t('confirm_password')}</label><input id="confirmAdminPassword" type="password" class="input" autocomplete="new-password"><button id="changeAdminPassword" class="btn primary dav-gap">${say('更新密碼並重新登入','更新密码并重新登录')}</button><p id="passwordResult" role="status"></p></div></div><div class="section pad dav-gap"><p>${say('忘記密碼：在伺服器停止服務後，使用 admin-reset --password-stdin 重設，再啟動服務。備份帳號及檔案不受影響。','忘记密码：在服务器停止服务后，使用 admin-reset --password-stdin 重置，再启动服务。备份账号及文件不受影响。')}</p><div class="kv"><div>${t('version')}</div><div>${esc(S.status.version)}</div><div>${t('root')}</div><div class="mono">${esc(S.status.root)}</div></div></div>`;
     $('settingsLocale').value=S.locale;$('settingsLocale').onchange=e=>setLocale(e.target.value);
-    const themeSelect=$('settingsTheme');
+    const themeLabel=$('settingsThemeLabel');
     const appearance=document.createElement('div');appearance.className='appearance-options';
-    appearance.innerHTML=`<div class="theme-previews" role="group" aria-label="${say('主題預覽','主题预览')}">${[['system','系統','系统'],['dark','深色','深色'],['black','深黑','深黑'],['white','白色','白色']].map(([value,tw,cn])=>`<button type="button" class="theme-choice" data-preview="${value}" aria-pressed="false"><span class="theme-sample" aria-hidden="true"><i></i><i></i></span>${say(tw,cn)}</button>`).join('')}</div>
+    appearance.innerHTML=`<div class="theme-previews" role="group" aria-labelledby="settingsThemeLabel">${[['system','系統','系统'],['dark','深色','深色'],['black','深黑','深黑'],['white','白色','白色']].map(([value,tw,cn])=>`<button type="button" class="theme-choice" data-preview="${value}" aria-pressed="false"><span class="theme-sample" aria-hidden="true"><i></i><i></i></span>${say(tw,cn)}</button>`).join('')}</div>
+    <label class="field-label" for="settingsSurface">${say('介面材質','界面材质')}</label><select class="select" id="settingsSurface" aria-describedby="surfaceHint"><option value="classic">${say('經典（無玻璃效果）','经典（无玻璃效果）')}</option><option value="glass">${say('液態玻璃','液态玻璃')}</option></select><p id="surfaceHint" class="muted tiny">${say('柔和透光與高光邊緣；搭配任一主題。選擇經典可關閉效果。','柔和透光与高光边缘；搭配任一主题。选择经典可关闭效果。')}</p>
     <label class="field-label" for="settingsAccent">${say('強調色','强调色')}</label><select class="select" id="settingsAccent"><option value="blue">${say('藍色','蓝色')}</option><option value="teal">${say('青綠','青绿')}</option><option value="violet">${say('紫色','紫色')}</option></select>
     <label class="field-label" for="settingsDensity">${say('排列密度','排列密度')}</label><select class="select" id="settingsDensity"><option value="comfortable">${say('舒適','舒适')}</option><option value="compact">${say('緊湊（桌面）','紧凑（桌面）')}</option></select>
     <label class="check-label"><input id="settingsMotion" type="checkbox">${say('減少動畫','减少动画')}</label>
-    <p class="muted">${say('外觀立即套用，只儲存在目前瀏覽器。手機保留適合觸控的間距。','外观立即应用，仅保存在当前浏览器。手机保留适合触控的间距。')}</p><button class="btn" id="resetAppearance">${say('還原外觀預設','恢复外观默认')}</button><p id="appearanceStatus" role="status" class="muted"></p>`;
-    themeSelect.after(appearance);
-    const syncAppearance=()=>{const p=SBPreferences.all();themeSelect.value=p.theme;$('settingsAccent').value=p.accent;$('settingsDensity').value=p.density;$('settingsMotion').checked=p.motion==='reduce';appearance.querySelectorAll('[data-preview]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.preview===p.theme)));};
+    <p class="muted">${say('外觀立即套用，只儲存在目前瀏覽器。手機保留適合觸控的間距。','外观立即应用，仅保存在当前浏览器。手机保留适合触控的间距。')}</p><button class="btn" id="resetAppearance">${say('還原外觀預設','恢复外观默认')}</button><p id="appearanceStatus" role="status" class="muted"></p><p class="muted tiny">OPPO Sans 4.0 · Copyright 2024 Guangdong OPPO Mobile Telecommunications Corp., Ltd. · <a href="/web/admin/OPPO-Sans-LICENSE.txt" target="_blank" rel="noopener">${say('字型授權','字体授权')}</a></p>`;
+    // Render short appearance choices in-page, avoiding native popup compositing.
+    appearance.querySelectorAll('select').forEach(select=>{
+      const key=select.id.replace('settings','').toLowerCase();
+      const label=appearance.querySelector(`label[for="${select.id}"]`);
+      const group=document.createElement('div');group.id=select.id;group.className='appearance-choices';group.setAttribute('role','group');
+      if(label){label.id=select.id+'Label';label.removeAttribute('for');group.setAttribute('aria-labelledby',label.id);}
+      if(select.hasAttribute('aria-describedby'))group.setAttribute('aria-describedby',select.getAttribute('aria-describedby'));
+      for(const option of select.options){const button=document.createElement('button');button.type='button';button.className='btn';button.dataset.preference=key;button.dataset.value=option.value;button.textContent=option.textContent;button.setAttribute('aria-pressed','false');group.appendChild(button);}
+      select.replaceWith(group);
+    });
+    themeLabel.after(appearance);
+    const syncAppearance=()=>{const p=SBPreferences.all();appearance.querySelectorAll('[data-preference]').forEach(b=>b.setAttribute('aria-pressed',String(p[b.dataset.preference]===b.dataset.value)));$('settingsMotion').checked=p.motion==='reduce';appearance.querySelectorAll('[data-preview]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.preview===p.theme)));};
     const appearanceResult=ok=>{syncAppearance();$('appearanceStatus').textContent=ok?say('已套用並儲存','已应用并保存'):say('已套用；瀏覽器禁止儲存，關閉後可能不保留。','已应用；浏览器禁止保存，关闭后可能不保留。');};
     const changeAppearance=values=>appearanceResult(SBPreferences.update(values));
-    themeSelect.onchange=e=>changeAppearance({theme:e.target.value});
     appearance.querySelectorAll('[data-preview]').forEach(b=>b.onclick=()=>changeAppearance({theme:b.dataset.preview}));
-    $('settingsAccent').onchange=e=>changeAppearance({accent:e.target.value});
-    $('settingsDensity').onchange=e=>changeAppearance({density:e.target.value});
+    appearance.querySelectorAll('[data-preference]').forEach(b=>b.onclick=()=>changeAppearance({[b.dataset.preference]:b.dataset.value}));
     $('settingsMotion').onchange=e=>changeAppearance({motion:e.target.checked?'reduce':'system'});
     $('resetAppearance').onclick=()=>appearanceResult(SBPreferences.reset());syncAppearance();
     const current=()=>generation===davGeneration&&S.page==='settings';

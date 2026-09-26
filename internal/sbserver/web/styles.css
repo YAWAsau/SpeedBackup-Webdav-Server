@@ -181,7 +181,8 @@ tr:last-child td { border-bottom: 0; }
     --shadow: none;
 }
 :root[data-theme="black"] {--bg:#000;--panel:#080808;--panel2:#121212;--line:#303030;--text:#f5f5f5;--muted:#aaa;}
-:root[data-theme="white"] {color-scheme:light;}
+/* Explicit white must also opt out of Chromium's automatic darkening. */
+:root[data-theme="white"] {color-scheme:only light;}
 .input[readonly] {opacity:.85;}
 .settings-stack {display:grid;gap:16px;align-content:start;}
 

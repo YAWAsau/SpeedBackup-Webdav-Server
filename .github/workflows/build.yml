@@ -16,6 +16,10 @@ jobs:
       - run: go test ./...
       - run: go test -race ./...
       - run: go vet ./...
+      - name: Install browser test dependencies
+        run: npm ci
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
       - run: for test in scripts/test_*.cjs; do node "$test" || exit; done
       - run: bash ./build_linux.sh
       - uses: actions/upload-artifact@v4
@@ -34,6 +38,10 @@ jobs:
           node-version: '22'
       - run: go test ./...
       - run: go vet ./...
+      - name: Install browser test dependencies
+        run: npm ci
+      - name: Install Chromium for browser tests
+        run: npx playwright install chromium
       - shell: pwsh
         run: |
           Get-ChildItem scripts/test_*.cjs | ForEach-Object {

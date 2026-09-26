@@ -1,6 +1,7 @@
 /dist/
 /.build/
 /evidence/
+/node_modules/
 *.log
 *.test
 FIRST_RUN_TOKEN.txt

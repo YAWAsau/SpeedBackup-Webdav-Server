@@ -1,0 +1,8 @@
+{
+  "name": "speedbackup-server-tests",
+  "private": true,
+  "description": "Development dependencies for WebAdmin browser regression tests",
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

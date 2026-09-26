@@ -1,7 +1,7 @@
 package sbserver
 
 const (
-	ServerVersion  = "0.3.13-webdav14"
+	ServerVersion  = "0.3.14-webdav15"
 	ProtocolMajor  = 1
 	ProtocolMinor  = 0
 	ManifestSchema = "speedbackup.server.manifest.v1"

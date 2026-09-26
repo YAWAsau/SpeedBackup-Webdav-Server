@@ -1,4 +1,4 @@
-# SpeedBackup Webdav Server v0.3.13-webdav14
+# SpeedBackup Webdav Server v0.3.14-webdav15
 
 
 Windows / Linux 開源 WebDAV 備份伺服器，提供管理網頁、帳號與目錄管理、即時傳輸監看及內網 mDNS 公告。
@@ -9,7 +9,7 @@ Windows / Linux 開源 WebDAV 備份伺服器，提供管理網頁、帳號與�
 - 完整原始碼包含 Go vendor 依賴；建置要求 Go 1.26 以上，本版成品使用 Go 1.27.1。
 - Windows：`./build_windows.ps1 -RequireInstaller`（需 Inno Setup）；Linux：`bash ./build_linux.sh`。測試：`go test ./...`、`go vet ./...`，以及 `scripts/test_*.cjs`（Node.js）。
 - v0.3.13 新增區網 mDNS 探索公告，詳見 [LAN_DISCOVERY](docs/LAN_DISCOVERY.md)。
-- [驗證與限制](VALIDATION.md)：Windows 測試已執行；本版 Linux 成品為交叉編譯，尚未完成本版 Linux runtime、ARM64 實機及安裝升級驗證。
+- [驗證與限制](VALIDATION.md)：Windows 及 Linux amd64 測試已通過；ARM64 實機及安裝升級流程未重測。
 
 ## 授權
 
@@ -61,7 +61,7 @@ Windows 服務資料可能需要以系統管理員開啟終端才能讀取。使
 
 ## 即時狀態與統計範圍
 
-開始／完成事件立即喚醒監看，傳輸中每 250 ms 取樣；前端合併突發更新，最多每秒 10 次。閒置使用 25 秒長輪詢心跳，隱藏頁面取消監看。滾動時統計持續更新，清單只建立可見列及少量預先保留列。
+開始／完成事件立即喚醒監看，傳輸中每 50 ms 取樣；前端合併突發更新，最多每秒 20 次。閒置使用 25 秒長輪詢心跳，隱藏頁面取消監看。滾動時統計持續更新，清單只建立可見列及少量預先保留列。
 
 即時壓縮的 PUT 通常沒有預先提供 Content-Length：進行中顯示已傳輸量與「總大小尚未確定」，成功後顯示實際大小；不推算未知總長的百分比。速度欄為該檔案的平均傳輸速度。檔案之間真正沒有 GET／PUT 時，傳輸中顯示 0，並保留累計完成數。
 
@@ -153,7 +153,7 @@ PUT先写入暫存檔再發布，維持手機.part→HEAD→MOVE流程，支援R
 
 「備份與恢復」及「傳輸工作階段」都顯示 WebDAV 上傳／下載紀錄。既有 API 上傳工作仍保留，有資料時顯示於下方。即時列表只保留本次伺服器啟動後的近期紀錄；重啟後可至事件日誌查閱已完成的傳輸。
 
-開始／完成事件立即喚醒、進度每 250 ms 取樣，前端突發更新最多每秒10次，閒置長輪詢25秒。虛擬清單重用可見列，滾動不暫停統計；閱讀歷史時保留所在列，隱藏或離頁即取消監看。沒有觀看頁面時不建立背景進度取樣。事件日誌延後繪製螢幕外的內容。
+開始／完成事件立即喚醒、進度每 50 ms 取樣，前端突發更新最多每秒10次，閒置長輪詢25秒。虛擬清單重用可見列，滾動不暫停統計；閱讀歷史時保留所在列，隱藏或離頁即取消監看。沒有觀看頁面時不建立背景進度取樣。事件日誌延後繪製螢幕外的內容。
 
 ## 並行傳輸與資源使用
 
@@ -240,7 +240,7 @@ speedbackup-server debug-export --root "服務資料目錄" --output "speedbacku
 - Linux 自啟控制使用 systemd 啟動的本機 socket helper；主服務維持 speedbackup 非 root 帳號。helper 只接受開／關自己的單一服務，檢查 Unix peer 的 UID 與正在運行的服務 PID，不接受任意命令。
 - 手機管理網址是 `http://電腦區網IPv4:連接埠/web/admin`；設定內提供可複製網址。手機上的 127.0.0.1 指手機自己。先在伺服器本機建立管理員，之後區網可用管理員帳密登入；匿名分享不代表匿名管理權限。
 
-手機版使用緊湊的三欄導覽、獨立一列的重新整理／語言控制、縱向分享欄位及傳輸卡片。傳輸卡片仍使用虛擬清單，捲動時持續刷新統計；桌面保留表格排列。
+手機版使用緊湊的兩欄導覽、獨立一列的重新整理／語言控制、縱向分享欄位及傳輸卡片。傳輸卡片仍使用虛擬清單，捲動時持續刷新統計；桌面保留表格排列。
 
 ## webdav13：外觀與連線可靠性
 
@@ -250,3 +250,9 @@ speedbackup-server debug-export --root "服務資料目錄" --output "speedbacku
 - 參考 PatternFly 的表單分組、Nextcloud 的語意色彩變數、File Browser 的個人偏好分組，以現有原生 JS/CSS 實作，未引入額外前端框架。SFTPGo 的全域連線限制需要獨立容量驗證，本版未直接套用，避免影響既有多檔傳輸。
 
 設計參考：https://www.patternfly.org/components/forms/form/html/ 、https://docs.nextcloud.com/server/stable/developer_manual/html_css_design/css.html 、https://github.com/filebrowser/filebrowser/blob/master/frontend/src/views/settings/Profile.vue 、https://github.com/sftpgo/docs/blob/main/docs/config-file.md
+
+## webdav15：單一儀表板與流暢監看
+
+登入後預設開啟儀表板；即時傳輸只保留一處。「分享與備份 → 管理分享」保留帳號、目錄及連線設定。移除重複的備份與恢復、傳輸工作階段側欄項目。
+
+傳輸中取樣 50ms，進度條平滑過渡至已收到的數值，不推測未傳輸的 bytes。開啟減少動畫時不使用過渡。只有進度變動時傳送 active delta；開始／完成／失敗、重連與首次讀取傳回完整最近 200 筆紀錄。舊 API 呼叫保留完整回應；閒置維持 25 秒長輪詢，背景頁面停止監看。

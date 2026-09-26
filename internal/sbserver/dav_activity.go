@@ -206,19 +206,33 @@ func (a *davActivity) wait(ctx context.Context, after uint64, progressInterval, 
 	}
 }
 func (d *davService) activityHandler(w http.ResponseWriter, r *http.Request) {
+	var after uint64
 	if r.URL.Query().Get("watch") == "1" {
-		after, err := strconv.ParseUint(r.URL.Query().Get("after"), 10, 64)
+		var err error
+		after, err = strconv.ParseUint(r.URL.Query().Get("after"), 10, 64)
 		if err != nil {
 			writeErr(w, 400, "invalid activity revision")
 			return
 		}
-		if d.activity.wait(r.Context(), after, 250*time.Millisecond, 25*time.Second) != nil {
+		if d.activity.wait(r.Context(), after, 50*time.Millisecond, 25*time.Second) != nil {
 			return
 		}
 	}
 	transfers, revision, totals := d.activity.snapshotState()
+	// Opt-in progress deltas omit unchanged history. Lifecycle changes and
+	// initial/reconnected requests always return the full bounded snapshot.
+	partial := r.URL.Query().Get("watch") == "1" && r.URL.Query().Get("delta") == "1" && after == revision
+	if partial {
+		live := make([]davTransfer, 0, totals.Active)
+		for _, transfer := range transfers {
+			if transfer.Ended == 0 {
+				live = append(live, transfer)
+			}
+		}
+		transfers = live
+	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 200, map[string]any{"transfers": transfers, "revision": strconv.FormatUint(revision, 10), "summary": totals, "snapshot_ms": time.Now().UnixMilli(), "stats_scope": "since_server_start", "scope": "server_transport_only", "client_restore_status": "not_reported", "history_limit": 200})
+	writeJSON(w, 200, map[string]any{"transfers": transfers, "partial": partial, "revision": strconv.FormatUint(revision, 10), "summary": totals, "snapshot_ms": time.Now().UnixMilli(), "stats_scope": "since_server_start", "scope": "server_transport_only", "client_restore_status": "not_reported", "history_limit": 200})
 }
 
 type davReadMeter struct {

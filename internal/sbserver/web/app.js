@@ -3,7 +3,7 @@
   const I18N = {
     'zh-TW': {
       admin_user:'管理員帳號', admin_password:'密碼', confirm_password:'確認密碼', login_hint: '使用管理員帳號密碼登入。忘記密碼可在伺服器本機重設，不必保存登入 Token。', token: '管理 / API Token', login: '登入',
-      webdav: '備份與恢復', webdav_sub: 'WebDAV 帳號與即時傳輸；恢復進度參考', dashboard: '儀表板', profiles: '分享與備份', sessions: '傳輸工作階段', manifests: 'Manifest', storage: '儲存空間', events: '事件日誌', settings: '設定',
+      webdav: '分享設定', webdav_sub: 'WebDAV 帳號、目錄與連線設定', dashboard: '儀表板', profiles: '分享與備份', sessions: '傳輸工作階段', manifests: 'Manifest', storage: '儲存空間', events: '事件日誌', settings: '設定',
       connected: '伺服器已連線', logout: '登出', refresh: '重新整理',
       dashboard_sub: '伺服器、協議與儲存狀態總覽', profiles_sub: '分享目錄與近期傳輸中的備份', sessions_sub: '備份與恢復的檔案傳輸進度及近期紀錄', manifest_sub: '查看目前 generation 的完整 manifest', storage_sub: 'CAS object store 與安全孤兒清理', events_sub: '伺服器端 audit events', settings_sub: '外觀、開機自啟、管理員密碼與伺服器資訊',
       uptime: '運行時間', objects: '物件數', object_bytes: '物件容量', generations: 'Generation', session_count: 'Sessions', profile_count: 'Profiles', protocol: '協議', version: '版本', root: '備份根目錄', listen: '監聽位址', server_info: '伺服器資訊', capabilities: 'Capabilities',
@@ -16,7 +16,7 @@
     },
     'zh-CN': {
       admin_user:'管理员账号', admin_password:'密码', confirm_password:'确认密码', login_hint: '使用管理员账号密码登录。忘记密码可在服务器本机重置，不必保存登录 Token。', token: '管理 / API Token', login: '登录',
-      webdav: '备份与恢复', webdav_sub: 'WebDAV 账号与实时传输；恢复进度参考', dashboard: '仪表盘', profiles: '共享与备份', sessions: '传输会话', manifests: 'Manifest', storage: '存储空间', events: '事件日志', settings: '设置',
+      webdav: '共享设置', webdav_sub: 'WebDAV 账号、目录与连接设置', dashboard: '仪表盘', profiles: '共享与备份', sessions: '传输会话', manifests: 'Manifest', storage: '存储空间', events: '事件日志', settings: '设置',
       connected: '服务器已连接', logout: '退出', refresh: '刷新',
       dashboard_sub: '服务器、协议与存储状态总览', profiles_sub: '共享目录与近期传输中的备份', sessions_sub: '备份与恢复的文件传输进度及近期记录', manifest_sub: '查看当前 generation 的完整 manifest', storage_sub: 'CAS object store 与安全孤儿清理', events_sub: '服务器端 audit events', settings_sub: '外观、开机自启、管理员密码与服务器信息',
       uptime: '运行时间', objects: '对象数', object_bytes: '对象容量', generations: 'Generation', session_count: 'Sessions', profile_count: 'Profiles', protocol: '协议', version: '版本', root: '备份根目录', listen: '监听地址', server_info: '服务器信息', capabilities: 'Capabilities',
@@ -29,7 +29,7 @@
     }
   };
 
-  const S = { setupRequired:false, localSetupAllowed:false, locale: SBPreferences.read('sb_locale') || 'zh-TW', page: 'webdav', status: null, caps: null, storage: null, profiles: [] };
+  const S = { setupRequired:false, localSetupAllowed:false, locale: SBPreferences.read('sb_locale') || 'zh-TW', page: 'dashboard', status: null, caps: null, storage: null, profiles: [] };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const t = (k) => I18N[S.locale]?.[k] ?? I18N['zh-TW'][k] ?? k;
@@ -99,7 +99,7 @@
   function renderHeader(){ const [a,b]=pageMeta[S.page]||pageMeta.dashboard; $('pageTitle').textContent=t(a); $('pageSubtitle').textContent=t(b); }
   let shareEditor=null;
   function canLeave(){if(shareEditor?.busy()){toast(S.locale==='zh-CN'?'正在应用设置，请稍候。':'正在套用設定，請稍候。');return false;}return true;}
-  function setPage(p){ if(!canLeave())return;S.page=p; document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===p)); renderHeader(); renderPage(); }
+  function setPage(p){ if(p==='sessions')p='dashboard';if(!canLeave())return;S.page=p; document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===(p==='webdav'?'profiles':p))); renderHeader(); renderPage(); }
 
   function metricStat(label, value, sub='') { return `<div class="metric"><div class="stat-label">${esc(label)}</div><div class="stat-value">${esc(value)}</div><div class="stat-sub">${esc(sub)}</div></div>`; }
   function empty(){ return `<div class="empty">${esc(t('no_data'))}</div>`; }
@@ -128,18 +128,8 @@
       const backups=[...new Set(activity.transfers.filter(x=>x.username===user.username&&x.backup).map(x=>x.backup))];
       return `<tr><td data-label="${say('分享名稱','共享名称')}">${esc(user.username)}</td><td data-label="${t('state')}">${user.disabled?say('已停用','已停用'):user.anonymous?say('匿名分享','匿名共享'):say('帳密分享','账号密码共享')}</td><td class="mono" data-label="${say('分享目錄','共享目录')}">${esc(user.directory||say('預設帳號目錄','默认账号目录'))}</td><td data-label="${say('近期備份','近期备份')}">${backups.map(esc).join('<br>')||say('尚無可辨識的備份目錄','暂无可识别的备份目录')}</td></tr>`;
     }).join('');
-    $('content').innerHTML=`<div class="section pad"><h3>${say('WebDAV 分享與近期備份','WebDAV 共享与近期备份')}</h3><div class="table-wrap"><table class="share-table"><thead><tr><th>${say('分享名稱','共享名称')}</th><th>${t('state')}</th><th>${say('分享目錄','共享目录')}</th><th>${say('近期傳輸中的備份名稱','近期传输中的备份名称')}</th></tr></thead><tbody>${shares||`<tr><td colspan="4">${say('尚未建立分享，請至「備份與恢復」設定。','尚未创建共享，请到“备份与恢复”设置。')}</td></tr>`}</tbody></table></div><p class="muted tiny">${say('備份名稱取自本次運行的近期傳輸路徑，並非磁碟完整清單。','备份名称取自本次运行的近期传输路径，并非磁盘完整列表。')}</p><button id="configureShares" class="btn ghost">${say('管理分享','管理共享')}</button></div>`;
+    $('content').innerHTML=`<div class="section pad"><h3>${say('WebDAV 分享與近期備份','WebDAV 共享与近期备份')}</h3><div class="table-wrap"><table class="share-table"><thead><tr><th>${say('分享名稱','共享名称')}</th><th>${t('state')}</th><th>${say('分享目錄','共享目录')}</th><th>${say('近期傳輸中的備份名稱','近期传输中的备份名称')}</th></tr></thead><tbody>${shares||`<tr><td colspan="4">${say('尚未建立分享，請按「管理分享」設定。','尚未创建共享，请按“管理共享”设置。')}</td></tr>`}</tbody></table></div><p class="muted tiny">${say('備份名稱取自本次運行的近期傳輸路徑，並非磁碟完整清單。','备份名称取自本次运行的近期传输路径，并非磁盘完整列表。')}</p><button id="configureShares" class="btn ghost">${say('管理分享','管理共享')}</button></div>`;
     $('configureShares').onclick=()=>setPage('webdav');
-  }
-
-  async function renderSessions(){
-    const generation=davGeneration;
-    const say=(tw,sc)=>S.locale==='zh-CN'?sc:tw;
-    const rows=await api('/api/v1/admin/sessions');
-    if(S.page!=='sessions'||generation!==davGeneration)return;
-    const html=rows.map(s=>{const uploaded=Object.values(s.uploads||{}); const done=uploaded.filter(x=>x.complete).length; const bytes=uploaded.reduce((n,x)=>n+Number(x.received_size||0),0); return `<tr><td class="mono">${esc(s.id)}</td><td>${esc(s.device_id)}</td><td>${esc(s.profile_id)}</td><td><span class="badge ${s.state==='committed'?'good':'warn'}">${esc(s.state==='committed'?t('committed'):t('open'))}</span></td><td>${done}/${uploaded.length}<br><span class="muted">${formatBytes(bytes)}</span></td><td>${formatTime(s.created_unix)}</td><td>${esc(s.committed_generation??'—')}</td></tr>`}).join('');
-    $('content').innerHTML=davMonitorMarkup()+`<div class="section dav-gap" ${rows.length?'':'hidden'}><div class="section-head"><h3>${say('其他上傳工作階段','其他上传会话')}</h3></div><div class="table-wrap"><table><thead><tr><th>ID</th><th>${t('device')}</th><th>${t('profile')}</th><th>${t('state')}</th><th>${t('uploaded')}</th><th>${t('created')}</th><th>${t('generation')}</th></tr></thead><tbody>${html||`<tr><td colspan="7">${empty()}</td></tr>`}</tbody></table></div></div>`;
-    await startDAVMonitor('sessions',generation);
   }
 
   async function renderEvents(){
@@ -271,21 +261,22 @@
   async function startDAVMonitor(page,generation){
     if(S.page!==page||generation!==davGeneration)return;
     const view=SBDAVMonitor.create({stats:$('davStats'),transfers:$('davTransfers'),say:(tw,sc)=>S.locale==='zh-CN'?sc:tw,formatBytes,formatDuration});
-    let stopped=false,timer,request,polling=false,revision=null;
+    let stopped=false,timer,request,polling=false,revision=null,history=[];
     const alive=()=>!stopped&&S.page===page&&generation===davGeneration;
     const poll=async()=>{
       clearTimeout(timer);
       if(!alive()||document.hidden||polling)return;
       polling=true;request=new AbortController();let retryDelay=0;const started=performance.now();
       try{
-        const watch=revision===null?'':'?watch=1&after='+encodeURIComponent(revision);
+        const watch=revision===null?'':'?watch=1&after='+encodeURIComponent(revision)+'&delta=1';
         const data=await api('/api/v1/admin/webdav/activity'+watch,{signal:request.signal,timeoutMs:35000});
         revision=typeof data.revision==='string'?data.revision:null;
         if(!alive()||document.hidden)return;
-        const active=view.update(data.transfers,data.snapshot_ms,data.summary);
-        if(revision===null)retryDelay=active?250:5000;
+        if(!data.partial)history=data.transfers.filter(x=>!['transferring','processing'].includes(x.state));
+        const active=view.update(data.partial?data.transfers.concat(history):data.transfers,data.snapshot_ms,data.summary);
+        if(revision===null)retryDelay=active?50:5000;
       }catch(e){retryDelay=5000;if(alive()&&e.name!=='AbortError')view.error(e.message);}
-      finally{polling=false;if(alive()&&!document.hidden)timer=setTimeout(poll,Math.max(retryDelay,100-(performance.now()-started)));}
+      finally{polling=false;if(alive()&&!document.hidden)timer=setTimeout(poll,Math.max(retryDelay,50-(performance.now()-started)));}
     };
     const onVisibility=()=>{if(document.hidden){clearTimeout(timer);request?.abort();}else{revision=null;poll();}};
     document.addEventListener('visibilitychange',onVisibility);
@@ -304,11 +295,7 @@
     if(S.page!=='webdav'||generation!==davGeneration)return;
     const base=SBWebDAV.initialAddress(location.origin,info.path,connection);
     $('content').innerHTML=`
-      <div class="section pad"><h3>${say('備份與恢復監看','备份与恢复监看')}</h3>
-        <p class="muted">${say('手機沿用 WebDAV，填入下方地址、帳號與密碼。可在此管理分享與查看傳輸紀錄。','手机沿用 WebDAV，填写下方地址、账号与密码。可在此管理共享与查看传输记录。')}</p>
-        <div class="alert">${say('此頁顯示伺服器收發進度。下載完成僅代表資料已由伺服器送出；手機解壓、安裝與權限恢復尚未回報。','此页显示服务器收发进度。下载完成仅代表数据已由服务器发出；手机解压、安装与权限恢复尚未上报。')}</div>
-        <div id="davStats" class="grid stats dav-gap"></div><div id="davTransfers" class="dav-gap"></div>
-      </div>
+      <div class="section pad"><h3>${say('分享帳號與目錄','共享账号与目录')}</h3><p class="muted">${say('設定手機使用的 WebDAV 地址、帳號與目錄；即時傳輸統一顯示於儀表板。','设置手机使用的 WebDAV 地址、账号与目录；实时传输统一显示于仪表盘。')}</p><button id="backToDashboard" class="btn ghost">${say('查看儀表板','查看仪表盘')}</button></div>
       <div class="share-layout dav-gap">
        <div class="section pad"><h3>${say('已建立帳號','已创建账号')}</h3><p class="muted">${say('每個帳號使用獨立目錄。管理員與 WebDAV 備份帳號分開；舊備份可放入對應目錄，目錄列舉即時更新。','每个账号使用独立目录。管理员与 WebDAV 备份账号分开；旧备份可放入对应目录，目录列表实时更新。')}</p>
         <div class="codebox">${esc(info.storage)}</div><div id="davAccounts" class="dav-gap"></div><button id="davNew" class="btn ghost dav-gap">${say('新增分享','新增共享')}</button>
@@ -420,7 +407,7 @@
       try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(value);}else{const box=document.createElement('textarea');box.value=value;document.body.appendChild(box);box.select();const ok=document.execCommand('copy');box.remove();if(!ok)throw new Error('clipboard unavailable');}toast(t('copied'));}catch(e){$('davSaveStatus').textContent=say('無法存取剪貼簿，請手動複製欄位內容。','无法访问剪贴板，请手动复制字段内容。');}
     };
     drawAccounts();editor.reset(knownUsers[0]?snapshot():null);
-    await startDAVMonitor('webdav',generation);
+    $('backToDashboard').onclick=()=>setPage('dashboard');
   }
 
   let lastDebugReport=0;
@@ -436,7 +423,7 @@
   async function renderPage(){
     if(!canLeave())return;shareEditor=null;stopDavMonitor();const generation=++davGeneration;
     try {
-      if(S.page==='webdav') await renderWebDAV(); else if(S.page==='dashboard') await renderDashboard(); else if(S.page==='profiles') await renderProfiles(); else if(S.page==='sessions') await renderSessions(); else if(S.page==='events') await renderEvents(); else if(S.page==='settings') await renderSettings();
+      if(S.page==='webdav') await renderWebDAV(); else if(S.page==='dashboard') await renderDashboard(); else if(S.page==='profiles') await renderProfiles(); else if(S.page==='events') await renderEvents(); else if(S.page==='settings') await renderSettings();
     } catch(e) { if(generation!==davGeneration)return;if(e.status===401){logout();return;} reportUIError(e);$('content').innerHTML=`<div class="alert error">${esc(t('request_failed'))}: ${esc(e.message)}</div><a class="btn ghost" href="/api/v1/admin/diagnostics/export" download>${S.locale==='zh-CN'?'下载服务器调试包':'下載伺服器除錯包'}</a>`; }
   }
 

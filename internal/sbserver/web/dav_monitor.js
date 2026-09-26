@@ -36,7 +36,7 @@
   function presentation(x,now,say,formatBytes,formatDuration){
     const operation=!['GET','PUT'].includes(x.operation),done=x.state==='transfer_complete'||x.state==='operation_complete',failed=x.state==='failed';
     const sec=Math.max(.001,((x.ended_ms||now)-x.started_ms)/1000);
-    const pct=operation?null:done?100:x.expected>0?Math.min(100,x.bytes/x.expected*100):null;
+    const pct=operation?null:done?100:x.expected>0?Math.min(99.9,x.bytes/x.expected*100):null;
     const detail=done?say('已完成 · 實際大小','已完成 · 实际大小'):x.expected>=0?(pct===null?'0%':pct.toFixed(1)+'%'):
       failed?say('已傳輸大小','已传输大小'):say('串流傳輸 · 總大小尚未確定','流式传输 · 总大小尚未确定');
     const stamp=occurrence(x.started_ms),end=occurrence(x.ended_ms);
@@ -75,6 +75,7 @@
       body.append(node);return {node,fields:node.querySelectorAll('[role="cell"]>div:not(.dav-progress)'),progress:node.querySelector('.dav-progress'),bar:node.querySelector('.dav-progress span'),badge:node.querySelector('.badge')};
     }
     function reorder(){
+      if(order.length===pending.length&&order.every((id,i)=>id===pending[i]))return;
       // Keep the historical row under the reader's eyes when new files arrive.
       const top=viewport.scrollTop,index=Math.floor(top/rowHeight),anchor=order[index];
       order=pending;
@@ -90,12 +91,16 @@
       for(let i=0;i<pool.length;i++){
         const row=pool[i];row.node.hidden=i>=needed;if(i>=needed)continue;
         const id=order[range.start+i],x=data.get(id);if(!x){row.node.hidden=true;continue;}
+        const previousID=row.node.dataset.transferId;
         row.node.dataset.transferId=id;row.node.setAttribute('aria-rowindex',String(range.start+i+2));
+        const completedKey=x.ended_ms?JSON.stringify(x):null;
+        if(completedKey&&row.completedKey===completedKey)continue;
+        row.completedKey=completedKey;
         const value=presentation(x,now,say,formatBytes,formatDuration);
         value.fields.forEach((v,j)=>{text(row.fields[j],v);if(row.fields[j].title!==String(v))row.fields[j].title=String(v);});
         row.fields[9].title=value.timeTitle;row.fields[10].title=value.timeTitle;
         row.progress.hidden=value.pct===null;
-        if(value.pct!==null){row.bar.style.transform=`scaleX(${value.pct/100})`;row.progress.setAttribute('aria-valuenow',value.pct.toFixed(1));}
+        if(value.pct!==null){row.bar.style.transition=previousID===id&&!x.ended_ms?'transform 60ms linear':'none';row.bar.style.transform=`scaleX(${value.pct/100})`;row.progress.setAttribute('aria-valuenow',value.pct.toFixed(1));}
         row.progress.setAttribute('aria-label',x.file);text(row.badge,value.state);row.badge.className=value.className;
       }
     }

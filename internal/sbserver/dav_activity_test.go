@@ -2,9 +2,63 @@ package sbserver
 
 import (
 	"context"
+	"encoding/json"
+	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 )
+
+func TestDAVProgressDeltaPreservesTotalsAndLifecycle(t *testing.T) {
+	d := &davService{}
+	for i := 0; i < 200; i++ {
+		v := d.activity.start("phone", "PUT", "backup/file", -1)
+		d.activity.add(v, 10)
+		d.activity.finish(v, 201, nil)
+	}
+	live := d.activity.start("phone", "GET", "backup/live", 1000)
+	d.activity.add(live, 100)
+	_, rev, _ := d.activity.snapshotState()
+	read := func(query string) (map[string]json.RawMessage, int) {
+		w := httptest.NewRecorder()
+		d.activityHandler(w, httptest.NewRequest("GET", "/activity"+query, nil))
+		if w.Code != 200 {
+			t.Fatal(w.Code, w.Body.String())
+		}
+		var result map[string]json.RawMessage
+		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+			t.Fatal(err)
+		}
+		return result, w.Body.Len()
+	}
+	_, fullBytes := read("")
+	delta, deltaBytes := read("?watch=1&delta=1&after=" + strconv.FormatUint(rev, 10))
+	var rows []davTransfer
+	json.Unmarshal(delta["transfers"], &rows)
+	if string(delta["partial"]) != "true" || len(rows) != 1 || rows[0].Bytes != 100 {
+		t.Fatal("bad progress delta", string(delta["transfers"]))
+	}
+	var totals davActivityTotals
+	json.Unmarshal(delta["summary"], &totals)
+	if totals.Completed != 200 || totals.UploadBytes != 2000 || totals.DownloadBytes != 100 {
+		t.Fatal(totals)
+	}
+	if deltaBytes*10 >= fullBytes {
+		t.Fatalf("history not omitted: full=%d delta=%d", fullBytes, deltaBytes)
+	}
+	d.activity.add(live, 900)
+	d.activity.finish(live, 200, nil)
+	complete, _ := read("?watch=1&delta=1&after=" + strconv.FormatUint(rev, 10))
+	json.Unmarshal(complete["transfers"], &rows)
+	if string(complete["partial"]) != "false" || len(rows) != 200 || rows[0].State != "transfer_complete" {
+		t.Fatal("completion must resync history")
+	}
+	legacy, _ := read("?delta=1")
+	if string(legacy["partial"]) != "false" {
+		t.Fatal("ordinary clients require full snapshot")
+	}
+	t.Logf("full snapshot %d bytes; progress delta %d bytes", fullBytes, deltaBytes)
+}
 
 func TestDAVLifecycleDoesNotWaitForProgressSample(t *testing.T) {
 	a := &davActivity{}

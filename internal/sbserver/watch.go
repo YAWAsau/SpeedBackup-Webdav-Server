@@ -171,9 +171,12 @@ func Watch(ctx context.Context, o WatchOptions, draw func([]string) error) error
 }
 
 func watchBytes(n float64) string {
-	units := []string{"B", "KiB", "MiB", "GiB", "TiB"}
+	if math.IsNaN(n) || math.IsInf(n, 0) || n < 0 {
+		n = 0
+	}
+	units := []string{"B", "KB", "MB", "GB", "TB", "PB"}
 	i := 0
-	for n >= 1024 && i < len(units)-1 {
+	for math.Round(n*10)/10 >= 1024 && i < len(units)-1 {
 		n /= 1024
 		i++
 	}

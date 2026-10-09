@@ -148,6 +148,7 @@ func RunServerWithReady(ctx context.Context, root, listen string, out io.Writer,
 	}
 	actual := ln.Addr().String()
 	handler := NewHTTPHandler(store, actual, cfg.TokenSHA256, nil)
+	defer handler.(*managedHTTPHandler).stop()
 	server := &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second, ErrorLog: log.New(diagnosticWriter{store.diagnostics}, "", 0)}
 
 	if out != nil {
@@ -181,6 +182,7 @@ func RunServerWithReady(ctx context.Context, root, listen string, out io.Writer,
 	defer stopDiscovery()
 	select {
 	case <-ctx.Done():
+		handler.(*managedHTTPHandler).stop()
 		c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_ = server.Shutdown(c)

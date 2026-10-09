@@ -42,7 +42,7 @@
   }
   function setLocale(locale) { if(!canLeave())return;S.locale = I18N[locale] ? locale : 'zh-TW'; try{localStorage.setItem('sb_locale', S.locale);}catch(_){} applyI18n(); if (!$('appView').classList.contains('hidden')) renderPage(); else drawLogin(); }
   function toast(msg) { const e=$('toast'); e.textContent=msg; e.classList.remove('hidden'); clearTimeout(toast._t); toast._t=setTimeout(()=>e.classList.add('hidden'),2600); }
-  function formatBytes(n) { n=Number(n||0); const u=['B','KiB','MiB','GiB','TiB']; let i=0; while(n>=1024&&i<u.length-1){n/=1024;i++;} return `${n.toFixed(i?2:0)} ${u[i]}`; }
+  const formatBytes=SBDAVMonitor.formatBytes;
   function formatTime(sec) { if(!sec) return '—'; return new Date(Number(sec)*1000).toLocaleString(S.locale); }
   function formatDuration(sec) { sec=Number(sec||0); const d=Math.floor(sec/86400); sec%=86400; const h=Math.floor(sec/3600); sec%=3600; const m=Math.floor(sec/60); const s=Math.floor(sec%60); return [d?`${d}d`:null,h?`${h}h`:null,m?`${m}m`:null,`${s}s`].filter(Boolean).join(' '); }
 
@@ -89,8 +89,11 @@
       if(info.authenticated){$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');await refreshCore();await renderPage();}
     }catch(e){$('loginError').textContent=e.message;$('loginError').classList.remove('hidden');$('loginBtn').disabled=true;}
   }
+  function syncDesktopTheme(){if(S.caps?.features?.backup_shutdown_v1)return SBPowerThemeSync(api,SBPreferences).catch(e=>toast("桌面外觀同步失敗："+e.message));return Promise.resolve();}
+  SBPreferences.subscribe(()=>{if(!$('appView').classList.contains('hidden'))void syncDesktopTheme();});
   async function refreshCore() {
     [S.status,S.caps] = await Promise.all([api('/api/v1/status'), api('/api/v1/capabilities')]);
+    await syncDesktopTheme();
   }
 
   const pageMeta = {
@@ -158,7 +161,7 @@
     <label class="field-label" for="settingsAccent">${say('強調色','强调色')}</label><select class="select" id="settingsAccent"><option value="blue">${say('藍色','蓝色')}</option><option value="teal">${say('青綠','青绿')}</option><option value="violet">${say('紫色','紫色')}</option></select>
     <label class="field-label" for="settingsDensity">${say('排列密度','排列密度')}</label><select class="select" id="settingsDensity"><option value="comfortable">${say('舒適','舒适')}</option><option value="compact">${say('緊湊（桌面）','紧凑（桌面）')}</option></select>
     <label class="check-label"><input id="settingsMotion" type="checkbox">${say('減少動畫','减少动画')}</label>
-    <p class="muted">${say('外觀立即套用，只儲存在目前瀏覽器。手機保留適合觸控的間距。','外观立即应用，仅保存在当前浏览器。手机保留适合触控的间距。')}</p><button class="btn" id="resetAppearance">${say('還原外觀預設','恢复外观默认')}</button><p id="appearanceStatus" role="status" class="muted"></p><p class="muted tiny">OPPO Sans 4.0 · Copyright 2024 Guangdong OPPO Mobile Telecommunications Corp., Ltd. · <a href="/web/admin/OPPO-Sans-LICENSE.txt" target="_blank" rel="noopener">${say('字型授權','字体授权')}</a></p>`;
+    <p class="muted">${say('外觀立即套用，並自動同步到電腦提示窗；多個管理端以最後同步的外觀為準。手機保留適合觸控的間距。','外观立即应用，并自动同步到电脑提示窗；多个管理端以最后同步的外观为准。手机保留适合触控的间距。')}</p><button class="btn" id="resetAppearance">${say('還原外觀預設','恢复外观默认')}</button><p id="appearanceStatus" role="status" class="muted"></p><p class="muted tiny">OPPO Sans 4.0 · Copyright 2024 Guangdong OPPO Mobile Telecommunications Corp., Ltd. · <a href="/web/admin/OPPO-Sans-LICENSE.txt" target="_blank" rel="noopener">${say('字型授權','字体授权')}</a></p>`;
     // Render short appearance choices in-page, avoiding native popup compositing.
     appearance.querySelectorAll('select').forEach(select=>{
       const key=select.id.replace('settings','').toLowerCase();
@@ -178,6 +181,7 @@
     $('settingsMotion').onchange=e=>changeAppearance({motion:e.target.checked?'reduce':'system'});
     $('resetAppearance').onclick=()=>appearanceResult(SBPreferences.reset());syncAppearance();
     const current=()=>generation===davGeneration&&S.page==='settings';
+    SBPowerSettings.mount({container:$('content'),api,current,preferences:SBPreferences});
     let bootState=null;
     function drawBoot(state,message=''){
       if(!current())return;bootState=state;

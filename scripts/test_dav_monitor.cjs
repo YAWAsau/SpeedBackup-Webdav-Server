@@ -45,3 +45,9 @@ assert.equal(p.pct,null);assert.equal(p.fields[4],'—');assert.equal(p.fields[6
 p=presentation({...stream,operation:'DELETE',state:'failed',http_status:404},1500,say,bytes,duration);
 assert.equal(p.state,'刪除失敗');assert.equal(p.fields[8],'HTTP 404');
 console.log('PASS: operation purpose, staged metadata/archives, MOVE destinations, precise local timestamps, honest mutation states');
+
+const fmt=globalThis.SBDAVMonitor.formatBytes;
+for(const [n,want] of [[0,'0 B'],[999,'999 B'],[1024,'1.00 KB'],[1048576,'1.00 MB'],[1073741824,'1.00 GB'],[1099511627776,'1.00 TB'],[1048575,'1.00 MB'],[333482154,'318.03 MB'],[NaN,'0 B'],[Infinity,'0 B']])assert.equal(fmt(n),want);
+const sized=presentation({...stream,bytes:2621440,expected:1073741824},2000,say,fmt,duration);
+assert.equal(sized.fields[4],'2.50 MB / 1.00 GB');assert.equal(sized.fields[6],'2.50 MB/s');
+console.log('PASS: Windows-compatible 1024 auto units and boundary rounding for bytes and rates');

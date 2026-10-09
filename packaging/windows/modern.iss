@@ -64,6 +64,7 @@ Name: "en"; MessagesFile: "compiler:Default.isl"
 [Files]
 Source: "{#MyBinaryDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyBinaryDir}\speedbackup-picker.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyBinaryDir}\speedbackup-notify.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\THIRD_PARTY_NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion

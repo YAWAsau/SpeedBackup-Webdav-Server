@@ -3,6 +3,7 @@
   const choices={theme:['system','dark','black','white'],accent:['blue','teal','violet'],density:['comfortable','compact'],motion:['system','reduce'],surface:['classic','glass']};
   const defaults={theme:'system',accent:'blue',density:'comfortable',motion:'system',surface:'classic'};
   const read=(key)=>{try{return localStorage.getItem(key);}catch(_){return null;}};
+  const listeners=new Set();
   let current={...defaults,theme:read('sb_theme')||'system'};
   try{Object.assign(current,JSON.parse(read('sb_appearance')||'{}'));}catch(_){}
   function update(values){
@@ -12,8 +13,9 @@
     }
     let persisted=true;
     try{localStorage.setItem('sb_appearance',JSON.stringify(current));localStorage.setItem('sb_theme',current.theme);}catch(_){persisted=false;}
+    for(const listener of listeners)listener({...current});
     return persisted;
   }
-  root.SBPreferences={get:()=>current.theme,set:value=>{update({theme:value});return current.theme;},all:()=>({...current}),update,reset:()=>update(defaults),read};
+  root.SBPreferences={get:()=>current.theme,set:value=>{update({theme:value});return current.theme;},all:()=>({...current}),subscribe:fn=>{listeners.add(fn);return ()=>listeners.delete(fn);},update,reset:()=>update(defaults),read};
   update(current);
 })(globalThis);

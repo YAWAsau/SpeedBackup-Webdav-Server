@@ -1,5 +1,11 @@
 (function(root){
   'use strict';
+  function formatBytes(value){
+    let n=Number(value);if(!Number.isFinite(n)||n<0)n=0;
+    const units=['B','KB','MB','GB','TB','PB'];let i=0;
+    while(i<units.length-1&&Number(n.toFixed(i?2:0))>=1024){n/=1024;i++;}
+    return `${n.toFixed(i?2:0)} ${units[i]}`;
+  }
   const ROW_HEIGHT=88,MOBILE_ROW_HEIGHT=232,OVERSCAN=3;
   function purpose(x,say){
     // The script publishes through file.part.<milliseconds>.<counter>. Strip
@@ -127,5 +133,5 @@
     }
     return Object.freeze({update,error(message){text(error,say('更新中斷，顯示上次資料：','更新中断，显示上次数据：')+message);error.hidden=false;},destroy(){destroyed=true;cancelAnimationFrame(frame);clearTimeout(settleTimer);resize?.disconnect();viewport.removeEventListener('scroll',onScroll);}});
   }
-  root.SBDAVMonitor=Object.freeze({create,presentation,windowRange,purpose,occurrence});
+  root.SBDAVMonitor=Object.freeze({formatBytes,create,presentation,windowRange,purpose,occurrence});
 })(globalThis);

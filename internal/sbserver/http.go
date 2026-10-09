@@ -33,6 +33,12 @@ type HTTPServer struct {
 	adminAuth     *adminAuth
 	pickers       pickerJobs
 	debugExportMu sync.Mutex
+	power         *powerManager
+}
+
+type managedHTTPHandler struct {
+	http.Handler
+	stop func()
 }
 
 func NewHTTPHandler(store *Store, listen, tokenHash string, webFS fs.FS) http.Handler {
@@ -48,7 +54,8 @@ func NewHTTPHandler(store *Store, listen, tokenHash string, webFS fs.FS) http.Ha
 		dav:          newDAVService(store),
 		adminAuth:    newAdminAuth(store),
 	}
-	return s.routes()
+	s.power = newPowerManager(store)
+	return &managedHTTPHandler{Handler: s.routes(), stop: s.power.close}
 }
 
 func (s *HTTPServer) getGate(id string) *sync.RWMutex {
@@ -87,6 +94,14 @@ func (s *HTTPServer) getObjectLock(key string) *sync.Mutex {
 func (s *HTTPServer) routes() http.Handler {
 	public := http.NewServeMux()
 	public.HandleFunc("GET /api/v1/capabilities", s.capabilities)
+	public.HandleFunc("POST /api/v1/power/complete", s.powerComplete)
+	public.HandleFunc("POST /api/v1/power/manual", s.powerComplete)
+	public.HandleFunc("POST /api/v1/power/challenge", s.powerChallenge)
+	public.HandleFunc("POST /api/v1/power/pair", s.powerPair)
+	public.HandleFunc("POST /api/v1/power/device-desktop", s.powerDeviceDesktop)
+	public.HandleFunc("GET /api/v1/power/jobs/{id}", s.powerComplete)
+	public.HandleFunc("POST /api/v1/power/desktop", s.powerDesktop)
+	public.HandleFunc("GET /web/admin/power_settings.js", s.webAsset("web/power_settings.js"))
 	public.HandleFunc("GET /api/v1/auth/status", s.adminAuth.status)
 	public.HandleFunc("POST /api/v1/auth/setup", s.adminAuth.credentials)
 	public.HandleFunc("POST /api/v1/auth/login", s.adminAuth.credentials)
@@ -115,6 +130,8 @@ func (s *HTTPServer) routes() http.Handler {
 
 	protected := http.NewServeMux()
 	protected.HandleFunc("GET /api/v1/status", s.status)
+	protected.HandleFunc("GET /api/v1/admin/power", s.powerAdmin)
+	protected.HandleFunc("POST /api/v1/admin/power", s.powerAdmin)
 	protected.HandleFunc("POST /api/v1/sessions", s.createSession)
 	protected.HandleFunc("GET /api/v1/sessions/{id}", s.getSession)
 	protected.HandleFunc("DELETE /api/v1/sessions/{id}", s.deleteSession)
@@ -151,6 +168,7 @@ func (s *HTTPServer) routes() http.Handler {
 
 	root := http.NewServeMux()
 	root.Handle("/api/v1/capabilities", public)
+	root.Handle("/api/v1/power/", public)
 	root.Handle("/api/v1/auth/", public)
 	root.Handle("/api/v1/native-picker/", public)
 	root.Handle("/web/", public)
@@ -159,6 +177,16 @@ func (s *HTTPServer) routes() http.Handler {
 	// Bypass ServeMux path cleaning for DAV. Its redirect on // would discard
 	// some streaming client request bodies and is unnecessary for rooted paths.
 	return securityHeaders(s.traceRequests(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Count complete DAV and object/session requests, including final MOVE/commit.
+		path := r.URL.Path
+		dataRequest := !strings.HasPrefix(path, "/web/") && !strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/api/v1/sessions") || strings.HasPrefix(path, "/api/v1/objects")
+		if dataRequest {
+			if !s.power.begin() {
+				writeErr(w, 503, "server is shutting down")
+				return
+			}
+			defer s.power.end()
+		}
 		if r.URL.Path == "/api" || strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/web" || strings.HasPrefix(r.URL.Path, "/web/") {
 			root.ServeHTTP(w, r)
 			return
@@ -262,17 +290,20 @@ func (s *HTTPServer) capabilities(w http.ResponseWriter, r *http.Request) {
 		"protocol": ProtocolVersion{Major: ProtocolMajor, Minor: ProtocolMinor},
 		"webdav":   map[string]any{"path": "/", "authentication": "basic", "progress_scope": "server_transport_only", "storage": "per_user_files"},
 		"features": map[string]bool{
-			"atomic_publish":            true,
-			"content_addressed_objects": true,
-			"resumable_upload":          true,
-			"sha256_verify":             true,
-			"manifest_diff":             true,
-			"generation_guard":          true,
-			"appdetails_audit":          true,
-			"orphan_cleanup_safe":       true,
-			"append_only_metadata":      true,
-			"web_admin":                 true,
-			"zh_tw_zh_cn":               true,
+			"backup_shutdown_v1":                powerSupported(),
+			"manual_shutdown_device_pairing_v1": powerSupported(),
+			"manual_shutdown_v1":                powerSupported(),
+			"atomic_publish":                    true,
+			"content_addressed_objects":         true,
+			"resumable_upload":                  true,
+			"sha256_verify":                     true,
+			"manifest_diff":                     true,
+			"generation_guard":                  true,
+			"appdetails_audit":                  true,
+			"orphan_cleanup_safe":               true,
+			"append_only_metadata":              true,
+			"web_admin":                         true,
+			"zh_tw_zh_cn":                       true,
 		},
 	})
 }

@@ -60,7 +60,7 @@ func TestWatchProgressRatesStallsAndReset(t *testing.T) {
 	p := watchSnapshot{Millis: 1000, Summary: davActivityTotals{UploadBytes: 1024}, Transfers: []davTransfer{{ID: 1, Started: 100, Operation: "PUT", Bytes: 1024, Expected: 4096}}}
 	s := watchSnapshot{Millis: 2000, Summary: davActivityTotals{UploadBytes: 2048, Active: 1}, Transfers: []davTransfer{{ID: 1, Started: 100, Operation: "PUT", Bytes: 2048, Expected: 4096, Path: "中文\x1b[2J\n\u202e.json", Username: "phone"}}}
 	frame := strings.Join(watchFrame(s, &p), "\n")
-	for _, want := range []string{"50.0%", "1.0 KiB/s", "ETA 2s", "更新 JSON 列表", "中文"} {
+	for _, want := range []string{"50.0%", "1.0 KB/s", "ETA 2s", "更新 JSON 列表", "中文"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("missing %s: %s", want, frame)
 		}
@@ -239,5 +239,21 @@ func TestWatchExitDoesNotInterruptActiveWebDAVUpload(t *testing.T) {
 	resp.Body.Close()
 	if e != nil || sha256.Sum256(got) != sha256.Sum256(payload) {
 		t.Fatal("content changed", e)
+	}
+}
+
+func TestWatchWindowsUnits(t *testing.T) {
+	for _, tc := range []struct {
+		n    float64
+		want string
+	}{
+		{0, "0.0 B"}, {999, "999.0 B"}, {1024, "1.0 KB"}, {1048576, "1.0 MB"}, {1073741824, "1.0 GB"}, {1099511627776, "1.0 TB"}, {1048575, "1.0 MB"}, {333482154, "318.0 MB"},
+	} {
+		if got := watchBytes(tc.n); got != tc.want {
+			t.Fatalf("%v: %s, want %s", tc.n, got, tc.want)
+		}
+	}
+	if got := watchRate(2621440, 1); got != "2.5 MB/s" {
+		t.Fatal(got)
 	}
 }

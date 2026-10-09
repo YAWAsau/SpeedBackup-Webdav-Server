@@ -11,6 +11,8 @@ Windows / Linux 開源 WebDAV 備份伺服器，提供管理網頁、帳號與�
 - v0.3.13 新增區網 mDNS 探索公告，詳見 [LAN_DISCOVERY](docs/LAN_DISCOVERY.md)。
 - [驗證與限制](VALIDATION.md)：Windows 及 Linux amd64 測試已通過；ARM64 實機及安裝升級流程未重測。
 
+Windows 關機提示測試版：原生 `speedbackup-notify.exe` 使用 Windows 內建 .NET Framework 的 WinForms/GDI+，不依賴 Edge、Chrome 或 WebView2。安裝包和可攜包均包含通知程式及未修改的 OPPO Sans 字型。`speedbackup-notify.exe --preview` 可離線預覽（不會關機）。WebAdmin 設定可同步桌面提示外觀，關機授權預設關閉。串接及安全測試方式見 [BACKUP_SHUTDOWN_V1](docs/BACKUP_SHUTDOWN_V1.md)。
+
 ## 授權
 
 Copyright (c) 2026 SpeedBackup contributors.
@@ -265,3 +267,13 @@ speedbackup-server debug-export --root "服務資料目錄" --output "speedbacku
 專案程式碼採 GPL-3.0-only；字型適用其獨立 OPPO Sans Fonts License Agreement，詳見 `internal/sbserver/web/OPPO-Sans-LICENSE.txt` 及 `THIRD_PARTY_NOTICES.txt`。官方原始字型來源：https://www.coloros.com/article/A00000074/ 。字型不可修改或獨立散布，隨附授權允許與軟體一同嵌入及散布。
 
 瀏覽器測試依賴：`npm ci`，再執行 `npx playwright install chromium`（Linux CI 使用 `--with-deps`）。
+
+### 裝置自動配對與桌面提示（v0.3.17-webdav18）
+
+管理員在設定開啟「允許裝置配對」。DEX 首次請求時，電腦原生視窗顯示裝置名稱及指紋；比對手機指紋後批准一次，後續不需重複配對。匿名 WebDAV 也適用。實際關機仍須另外啟用，並由手機每次明確確認；短效憑證限本次任務。可於 WebUI 撤銷裝置，撤銷會取消該裝置待執行的關機。無 Edge/WebView2 依賴。
+
+協議：[裝置配對](docs/POWER_DEVICE_PAIRING_V1.md)。目前尚未驗證 LocalSystem 服務啟動桌面提示及真正關機；自動測試僅使用隔離資料及安全預覽。
+
+桌面提示會自動同步 WebUI 外觀，以正常大小置頂；取消成功後自動關閉。設定列出已配對手機、指紋與狀態，刪除授權後手機須重新批准。視窗異常時會停止心跳、嘗試暫停關機並關閉，診斷位於 `%LOCALAPPDATA%\SpeedBackup\desktop-last-error.log`。大小與速度顯示採 1024 進位，使用 Windows 習慣的 KB／MB／GB 標示。
+
+本版保留每次手動確認及電腦端 60 秒倒數；不包含 conf 預授權的 30 秒無人值守模式。

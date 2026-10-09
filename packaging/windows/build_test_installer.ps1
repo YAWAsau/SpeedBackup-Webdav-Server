@@ -14,6 +14,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Test binary build failed' }
     go build -trimpath "-ldflags=$flags -H=windowsgui" -o dist/windows-review/speedbackup-picker.exe ./cmd/speedbackup-picker
     if ($LASTEXITCODE -ne 0) { throw 'Test picker build failed' }
+    Build-NativePowerPrompt $Root (Join-Path $Root 'dist/windows-review/speedbackup-notify.exe')
     & $Compiler /Q '/DMyPickerProtocol=speedbackup-picker-review'  "/DMyAppVersion=$Version" '/DMyAppName=SpeedBackup Server Review' '/DMyServiceName=SpeedBackupServerReview' '/DMyAppId={{7B5EC9B2-EFB8-47ED-9C86-D754E94B95B6}' '/DMyBinaryDir=..\..\dist\windows-review' '/DMyOutputDir=..\..\dist\windows-review-setup' packaging/windows/speedbackup-server.iss
     if ($LASTEXITCODE -ne 0) { throw 'Test installer build failed' }
 } finally { Pop-Location }

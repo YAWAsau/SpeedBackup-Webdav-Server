@@ -1,0 +1,35 @@
+diff --git a/vendor/github.com/brutella/dnssd/service.go b/vendor/github.com/brutella/dnssd/service.go
+--- a/vendor/github.com/brutella/dnssd/service.go
++++ b/vendor/github.com/brutella/dnssd/service.go
+@@ -439,16 +439,26 @@ func (s Service) ServicesMetaQueryName() string {
+ }
+ 
+ func (s *Service) addIP(ip net.IP, iface *net.Interface) {
+-	s.IPs = append(s.IPs, ip)
++	if !containsIP(s.IPs, ip) {
++		s.IPs = append(s.IPs, ip)
++	}
+ 	if iface != nil {
+-		ifaceIPs := []net.IP{ip}
+-		if ips, ok := s.ifaceIPs[iface.Name]; ok {
+-			ifaceIPs = append(ips, ip)
++		ips := s.ifaceIPs[iface.Name]
++		if !containsIP(ips, ip) {
++			s.ifaceIPs[iface.Name] = append(ips, ip)
+ 		}
+-		s.ifaceIPs[iface.Name] = ifaceIPs
+ 	}
+ }
+ 
++func containsIP(ips []net.IP, ip net.IP) bool {
++	for _, existing := range ips {
++		if existing.Equal(ip) {
++			return true
++		}
++	}
++	return false
++}
++
+ func newService(instance string) *Service {
+ 	name, typ, domain := parseServiceInstanceName(instance)
+ 	return &Service{

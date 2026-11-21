@@ -241,3 +241,23 @@ func TestPowerDesktopLocalOnlyAndHeartbeatReconnect(t *testing.T) {
 		}
 	}
 }
+
+func TestPowerMiuixTheme(t *testing.T) {
+	theme := map[string]string{"theme": "white", "accent": "violet", "surface": "miuix", "density": "comfortable", "motion": "system"}
+	if !validPowerTheme(theme) {
+		t.Fatal("miuix desktop sync rejected")
+	}
+	theme["surface"] = "unknown"
+	if validPowerTheme(theme) {
+		t.Fatal("unknown surface accepted")
+	}
+}
+
+func TestPowerStarfieldTheme(t *testing.T) {
+	for _, surface := range []string{"classic", "glass", "miuix"} {
+		theme := map[string]string{"theme": "space", "surface": surface, "accent": "violet", "motion": "full", "density": "comfortable"}
+		if !validPowerTheme(theme) {
+			t.Fatal("starfield desktop sync rejected", surface)
+		}
+	}
+}

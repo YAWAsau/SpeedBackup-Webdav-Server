@@ -176,9 +176,12 @@ func RunServerWithReady(ctx context.Context, root, listen string, out io.Writer,
 	_ = store.AppendEvent(AuditEvent{Unix: time.Now().Unix(), Event: "server.start", Message: "server started", Details: map[string]any{"listen": actual, "root": root, "version": ServerVersion, "pid": os.Getpid()}})
 	errCh := make(chan error, 1)
 	go func() { errCh <- server.Serve(ln) }()
-	stopDiscovery := startDAVDiscovery(ctx, ln.Addr(), func(message string) {
-		store.diagnostics.append(map[string]any{"kind": "lan_discovery", "time": time.Now().Format(time.RFC3339Nano), "message": message})
-	})
+	stopDiscovery := func() {}
+	if !cfg.DiscoveryDisabled {
+		stopDiscovery = startDAVDiscovery(ctx, ln.Addr(), cfg.DiscoveryID, func(message string) {
+			store.diagnostics.append(map[string]any{"kind": "lan_discovery", "time": time.Now().Format(time.RFC3339Nano), "message": message})
+		})
+	}
 	defer stopDiscovery()
 	select {
 	case <-ctx.Done():

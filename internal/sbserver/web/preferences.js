@@ -1,6 +1,6 @@
 (function(root){
   'use strict';
-  const choices={theme:['system','dark','black','white'],accent:['blue','teal','violet'],density:['comfortable','compact'],motion:['system','reduce'],surface:['classic','glass']};
+  const choices={theme:['system','dark','black','white','space'],accent:['blue','teal','violet'],density:['comfortable','compact'],motion:['system','full','reduce'],surface:['classic','glass','miuix']};
   const defaults={theme:'system',accent:'blue',density:'comfortable',motion:'system',surface:'classic'};
   const read=(key)=>{try{return localStorage.getItem(key);}catch(_){return null;}};
   const listeners=new Set();

@@ -277,3 +277,40 @@ speedbackup-server debug-export --root "服務資料目錄" --output "speedbacku
 桌面提示會自動同步 WebUI 外觀，以正常大小置頂；取消成功後自動關閉。設定列出已配對手機、指紋與狀態，刪除授權後手機須重新批准。視窗異常時會停止心跳、嘗試暫停關機並關閉，診斷位於 `%LOCALAPPDATA%\SpeedBackup\desktop-last-error.log`。大小與速度顯示採 1024 進位，使用 Windows 習慣的 KB／MB／GB 標示。
 
 本版保留每次手動確認及電腦端 60 秒倒數；不包含 conf 預授權的 30 秒無人值守模式。
+
+### miuix 介面風格（測試版）
+
+設定 → 介面風格 → miuix：中性底色、圓角分組與簡潔按鈕；支援四種明暗主題及三種強調色，保留 OPPO Sans Regular。Windows 桌面提示自動同步。此為參考 [Miuix](https://github.com/compose-miuix-ui/miuix) 設計的原生 CSS／GDI+ 實作，未嵌入 Compose 元件或複製其程式碼。
+
+
+### 動態星空配色（測試版）
+
+設定 → 主題 → 動態星空，可搭配經典、液態玻璃及 miuix。沿用模塊的彩色星點、極光、流星及原創伺服器圖示；面板採 45% 不透明度，星空不套背景模糊。一般玻璃主題保持原效果。
+WebUI 動畫上限 30 fps、像素倍率上限 1.5；背景分頁及離開頁面時暫停，星空固定播放，沒有動畫開關；系統及舊版減少動畫設定不會停止星空，背景分頁仍暫停。Windows 獨立提示窗同步星空配色，最小化及鎖定時不推進粒子動畫，不需要 Edge。此項更新不改變配對或關機授權規則。
+
+
+### 區網自動發現（DNS-SD）
+
+Server 啟動後在啟用 multicast 的實際監聽介面公告 `_webdav._tcp.local.`，SRV 使用實際 TCP 埠，TXT 僅包含 `txtvers=1`、`path=/`、`product=SpeedBackup`、`id=<32 位小寫十六進位>`。同介面的可連線 IPv4／IPv6 使用 A／AAAA 記錄，排除 loopback；只綁定 IPv4 時不公告 IPv6。每張網卡的實例名稱為 SpeedBackup 加固定安裝識別碼與介面索引，不含帳密、token 或備份路徑。`id` 為獨立隨機 128-bit 安裝識別，儲存在 root 設定的 `discovery_id`，跨重啟、換 IP／網卡、更新 token 保留；同一安裝的所有介面共用此 ID。舊設定首次啟動時自動遷移。手機應使用 product/id/scheme 追蹤，不能把公開 ID 當成認證。複製整份資料目錄會保留 ID；獨立新安裝應使用新的資料目錄。
+
+每 30 秒重新檢查網卡，停止時發送 TTL 0 撤銷公告。網路不支援 multicast 或 UDP 5353 被封鎖時，手動 WebDAV 連線仍可使用；失敗記錄於診斷日誌。Windows 安裝程式既有區網防火牆選項包含 UDP 5353。Linux 需由管理員允許該介面上的 UDP 5353；不會自動變更防火牆。
+
+公告預設開啟。先停止服務，再用既有資料目錄執行：
+
+```text
+speedbackup-server discovery --root "C:\ProgramData\SpeedBackup Server\data" --enabled=false
+```
+
+重新啟動後生效；以 `--enabled=true` 恢復。Linux 使用對應資料目錄及執行檔。此設定跨重啟、token 更新保留。此 HTTP Server 不公告 `_webdavs` 或 `_smb`；HTTPS 反向代理與 NAS 的公告由各服務管理。發現結果只是地址提示，原有 WebDAV 驗證仍必須通過。
+
+DNS-SD 使用 `github.com/brutella/dnssd v1.2.14`（MIT），包含名稱衝突探測與 known-answer suppression。已評估並選用上游 PR #66、#70、#71；版本固定與本地修補詳見 `vendor-patches/dnssd-lifecycle.txt`。依賴已 vendoring，請勿在未重套 `combined.patch` 的情況下重新產生 vendor。
+
+Windows discovery5 修正多播送出網卡選擇及同子網多網卡回覆。固定 ID 格式與設定相容 discovery4；不需重設帳密或配對。
+
+### 帳號更名與共用目錄（v0.3.18-webdav19-accounts2）
+
+在分享設定選取帳號後，按「更名此帳號」。原密碼、目錄、備份與設定保留，不搬動資料；手機須更新帳號名稱，帳號專屬匿名網址也須更新。新名稱不可與現有帳號重複。歷史儲存名稱保留給原帳號，原帳號可改回；其他帳號不能佔用該名稱。更名後請勿降回不支援名稱對照表的舊版本。
+
+需要兩個帳號共用資料時，先在原帳號勾選「允許與其他帳號共用此目錄」，再在另一帳號勾選同一選項並指定相同資料夾。帳密分開，但都可讀寫、覆寫及刪除共用檔案。相同目錄共用 WebDAV LOCK，檔案操作按實體路徑協調。父子目錄重疊及可能暴露伺服器設定的目錄仍禁止。要關閉共用，先將其他帳號改到不同目錄。
+
+驗證包含帳號更名、重啟後保留、原密碼與檔案、匿名／停用設定、共用目錄雙方同意、跨帳號 LOCK 及同路徑排隊；Chrome 自動化覆蓋 root 更名、共用帳號建立及儲存狀態。

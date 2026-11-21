@@ -39,3 +39,7 @@ CLASSPATH=/data/backup_tools/classes.dex app_process /system/bin com.xayah.dex.W
 stdout 是六欄 TSV：URL、state、evidence、HTTP status、source、elapsedMs；摘要在 stderr。回傳 0：有確認結果；1：没有確認結果（可能有待確認候選）；2：參數無效；3：掃描達限／部分完成。`probeWebDav` 僅接受無帳密的 literal IPv4 HTTP(S) URL。
 
 FULL_SOURCE 是建置來源，不是可直接執行的 Android 產品。測試範圍與限制見 REPORT.md。
+
+## 固定安裝識別（discovery4）
+
+Server TXT 新增 `id`：32 位小寫 ASCII hex（128-bit 隨機值），與密碼、token、IP、網卡和主機名稱無關。持久化於 root 設定的 `discovery_id`。同一 root 的所有公告共用 ID；換址、換埠及重啟保留。手機以 `product=SpeedBackup` + `id` + scheme 識別；fullname/hostname 包含介面索引，可能因網卡變動改變，不應用來否決同 ID。此 ID 是公開探索提示，不取代認證或配對授權。

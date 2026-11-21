@@ -558,6 +558,25 @@ func (s *Store) ConfigDir() string { return s.internal("config") }
 func (s *Store) SaveConfig(c ServerConfig) error {
 	s.metaMu.Lock()
 	defer s.metaMu.Unlock()
+	// Preserve installation identity even when callers reconstruct config to
+	// rotate credentials. A copied root deliberately keeps its identity.
+	previous, loadErr := s.LoadConfig()
+	if loadErr != nil && !errors.Is(loadErr, os.ErrNotExist) {
+		return loadErr
+	}
+	if previous.DiscoveryID != "" {
+		c.DiscoveryID = previous.DiscoveryID
+	}
+	if c.DiscoveryID == "" {
+		var err error
+		c.DiscoveryID, err = newDiscoveryID()
+		if err != nil {
+			return err
+		}
+	}
+	if !validDiscoveryID(c.DiscoveryID) {
+		return errors.New("invalid discovery_id")
+	}
 	n, err := nextVersion(s.ConfigDir())
 	if err != nil {
 		return err
@@ -580,7 +599,16 @@ func (s *Store) LoadConfig() (ServerConfig, error) {
 func (s *Store) LoadOrInitConfig() (ServerConfig, string, error) {
 	c, err := s.LoadConfig()
 	if err == nil {
-		return c, "", nil
+		if c.DiscoveryID == "" {
+			if err = s.SaveConfig(c); err != nil {
+				return c, "", err
+			}
+			c, err = s.LoadConfig()
+		}
+		if err == nil && !validDiscoveryID(c.DiscoveryID) {
+			err = errors.New("invalid discovery_id")
+		}
+		return c, "", err
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return c, "", err
@@ -593,7 +621,8 @@ func (s *Store) LoadOrInitConfig() (ServerConfig, string, error) {
 	if err = s.SaveConfig(c); err != nil {
 		return c, "", err
 	}
-	return c, tok, nil
+	c, err = s.LoadConfig()
+	return c, tok, err
 }
 func (s *Store) CleanupObjects(dry bool) (CleanupResponse, error) {
 	s.commitMu.Lock()

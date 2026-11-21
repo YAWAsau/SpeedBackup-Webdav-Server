@@ -116,6 +116,7 @@ func (s *HTTPServer) routes() http.Handler {
 	public.HandleFunc("GET /web/admin/preferences.js", s.webAsset("web/preferences.js"))
 	public.HandleFunc("GET /web/admin/request.js", s.webAsset("web/request.js"))
 	public.HandleFunc("GET /web/admin/dav_editor.js", s.webAsset("web/dav_editor.js"))
+	public.HandleFunc("GET /web/admin/starfield.js", s.webAsset("web/starfield.js"))
 	public.HandleFunc("GET /web/admin/styles.css", s.webAsset("web/styles.css"))
 	public.HandleFunc("GET /web/admin/oppo-sans-4-6c7d5864c661.ttf", s.webAsset("web/oppo-sans-4-6c7d5864c661.ttf"))
 	public.HandleFunc("GET /web/admin/OPPO-Sans-LICENSE.txt", s.webAsset("web/OPPO-Sans-LICENSE.txt"))
@@ -155,6 +156,7 @@ func (s *HTTPServer) routes() http.Handler {
 	protected.HandleFunc("POST /api/v1/admin/token/rotate", s.rotateToken)
 	protected.HandleFunc("GET /api/v1/admin/webdav", s.dav.admin)
 	protected.HandleFunc("POST /api/v1/admin/webdav", s.dav.admin)
+	protected.HandleFunc("POST /api/v1/admin/webdav/rename", s.dav.renameAccount)
 	protected.HandleFunc("GET /api/v1/admin/webdav/activity", s.dav.activityHandler)
 	protected.HandleFunc("GET /api/v1/admin/webdav/connection", s.webDAVConnection)
 	protected.HandleFunc("GET /api/v1/admin/directories", s.dav.directories)
@@ -983,6 +985,13 @@ func (s *HTTPServer) rotateToken(w http.ResponseWriter, r *http.Request) {
 	}
 	hash := SHA256Bytes([]byte(token))
 	cfg := ServerConfig{Schema: "speedbackup.server.config.v1", TokenSHA256: hash, CreatedUnix: nowUnix()}
+	if previous, e := s.store.LoadConfig(); e == nil {
+		cfg.DiscoveryDisabled = previous.DiscoveryDisabled
+		cfg.DiscoveryID = previous.DiscoveryID
+	} else if !os.IsNotExist(e) {
+		writeErr(w, http.StatusInternalServerError, e.Error())
+		return
+	}
 	if err := s.store.SaveConfig(cfg); err != nil {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return

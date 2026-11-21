@@ -17,3 +17,9 @@ assert.equal(p.update({theme:'dark'}),false);assert.equal(ctx.document.documentE
 p.reset();assert.equal(p.get(),'system');
 assert.equal(p.all().surface,'classic');assert.equal(ctx.document.documentElement.dataset.surface,'classic');
 console.log('PASS: appearance migration, persistence, validation, malformed/blocked storage and reset');
+
+p.update({surface:'miuix'});assert.equal(p.all().surface,'miuix');assert.equal(ctx.document.documentElement.dataset.surface,'miuix');
+
+p.update({theme:'space'});assert.equal(p.get(),'space');assert.equal(ctx.document.documentElement.dataset.theme,'space');
+
+p.update({motion:'full'});assert.equal(p.all().motion,'full');assert.equal(ctx.document.documentElement.dataset.motion,'full');

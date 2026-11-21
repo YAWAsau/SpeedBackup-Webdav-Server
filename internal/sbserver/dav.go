@@ -21,6 +21,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -41,12 +42,13 @@ func davRootReserved(name string) bool {
 }
 
 type davAccount struct {
-	Username     string `json:"username"`
-	Salt         string `json:"salt"`
-	PasswordHash string `json:"password_hash"`
-	Disabled     bool   `json:"disabled"`
-	Anonymous    bool   `json:"anonymous,omitempty"`
-	Directory    string `json:"directory,omitempty"`
+	Username        string `json:"username"`
+	Salt            string `json:"salt"`
+	PasswordHash    string `json:"password_hash"`
+	Disabled        bool   `json:"disabled"`
+	Anonymous       bool   `json:"anonymous,omitempty"`
+	Directory       string `json:"directory,omitempty"`
+	SharedDirectory bool   `json:"shared_directory,omitempty"`
 }
 type davService struct {
 	activity davActivity
@@ -70,7 +72,11 @@ func (d *davService) load(user string) (davAccount, string, error) {
 	if !davUsername.MatchString(user) {
 		return a, "", os.ErrNotExist
 	}
-	p, e := latestVersionFile(d.store.internal("webdav-users", user))
+	key, namesVersion, e := d.accountKey(user)
+	if e != nil {
+		return a, "", e
+	}
+	p, e := latestVersionFile(d.store.internal("webdav-users", key))
 	if e != nil {
 		return a, "", e
 	}
@@ -79,10 +85,14 @@ func (d *davService) load(user string) (davAccount, string, error) {
 		return a, "", e
 	}
 	e = json.Unmarshal(b, &a)
-	if a.Username != user || (!a.Anonymous && (a.Salt == "" || a.PasswordHash == "")) {
+	if !davUsername.MatchString(a.Username) || (namesVersion == "" && a.Username != user) || (!a.Anonymous && (a.Salt == "" || a.PasswordHash == "")) {
 		return a, "", os.ErrInvalid
 	}
-	return a, p, e
+	if a.Directory == "" && key != user {
+		a.Directory = filepath.Join(d.store.Root, "webdav", key)
+	}
+	a.Username = user
+	return a, p + "|" + namesVersion, e
 }
 func (d *davService) authenticate(user, password string) bool {
 	a, version, e := d.load(user)
@@ -116,18 +126,31 @@ func (d *davService) authenticate(user, password string) bool {
 func (d *davService) resources(user string) (*davMutationGate, webdav.LockSystem) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if d.gates[user] == nil {
-		d.gates[user] = &davMutationGate{}
-		d.locks[user] = webdav.NewMemLS()
+	key := user
+	if a, _, err := d.load(user); err == nil {
+		if dir, err := canonicalDirectory(d.accountDirectory(a)); err == nil {
+			key = dir
+			if runtime.GOOS == "windows" {
+				key = strings.ToLower(key)
+			}
+		}
 	}
-	return d.gates[user], d.locks[user]
+	// All accounts coordinate physical mutation paths. Protocol locks are shared
+	// only by accounts exposing exactly the same canonical directory.
+	if d.gates[""] == nil {
+		d.gates[""] = &davMutationGate{}
+	}
+	if d.locks[key] == nil {
+		d.locks[key] = webdav.NewMemLS()
+	}
+	return d.gates[""], d.locks[key]
 }
 
 // Never choose an arbitrary directory when multiple anonymous shares exist.
 func (d *davService) rootAnonymousUser() (string, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	entries, err := os.ReadDir(d.store.internal("webdav-users"))
+	entries, err := d.accountNames()
 	if errors.Is(err, os.ErrNotExist) {
 		return "", nil
 	}
@@ -136,10 +159,7 @@ func (d *davService) rootAnonymousUser() (string, error) {
 	}
 	user := ""
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		a, _, err := d.load(entry.Name())
+		a, _, err := d.load(entry)
 		if err != nil {
 			return "", err
 		}
@@ -156,21 +176,18 @@ func (d *davService) rootAnonymousUser() (string, error) {
 func (d *davService) admin(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		list := []map[string]any{}
-		entries, e := os.ReadDir(d.store.internal("webdav-users"))
+		entries, e := d.accountNames()
 		if e != nil && !errors.Is(e, os.ErrNotExist) {
 			writeErr(w, 500, "cannot read WebDAV accounts")
 			return
 		}
 		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-			a, _, e := d.load(entry.Name())
+			a, _, e := d.load(entry)
 			if e != nil {
 				writeErr(w, 500, "invalid WebDAV account configuration")
 				return
 			}
-			list = append(list, map[string]any{"username": a.Username, "disabled": a.Disabled, "anonymous": a.Anonymous, "anonymous_path": davPublicPrefix + a.Username + "/", "directory": d.accountDirectory(a), "custom_directory": a.Directory != ""})
+			list = append(list, map[string]any{"username": a.Username, "disabled": a.Disabled, "anonymous": a.Anonymous, "anonymous_path": davPublicPrefix + a.Username + "/", "directory": d.accountDirectory(a), "custom_directory": a.Directory != "", "shared_directory": a.SharedDirectory})
 		}
 		rootUser, e := d.rootAnonymousUser()
 		if e != nil {
@@ -181,11 +198,12 @@ func (d *davService) admin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Username  string  `json:"username"`
-		Password  string  `json:"password"`
-		Disabled  bool    `json:"disabled"`
-		Anonymous *bool   `json:"anonymous"`
-		Directory *string `json:"directory"`
+		Username        string  `json:"username"`
+		Password        string  `json:"password"`
+		Disabled        bool    `json:"disabled"`
+		Anonymous       *bool   `json:"anonymous"`
+		Directory       *string `json:"directory"`
+		SharedDirectory *bool   `json:"shared_directory"`
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 8192)
 	if e := json.NewDecoder(r.Body).Decode(&req); e != nil || !davUsername.MatchString(req.Username) {
@@ -194,10 +212,18 @@ func (d *davService) admin(w http.ResponseWriter, r *http.Request) {
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	key, _, e := d.accountKey(req.Username)
+	if e != nil {
+		writeErr(w, 409, "account name is reserved by an existing account")
+		return
+	}
 	a, _, e := d.load(req.Username)
 	if e != nil && !errors.Is(e, os.ErrNotExist) {
 		writeErr(w, 500, "cannot load WebDAV account")
 		return
+	}
+	if req.SharedDirectory != nil {
+		a.SharedDirectory = *req.SharedDirectory
 	}
 	if req.Anonymous != nil {
 		a.Anonymous = *req.Anonymous
@@ -228,7 +254,7 @@ func (d *davService) admin(w http.ResponseWriter, r *http.Request) {
 			a.Directory = ""
 		} else {
 			var directory string
-			directory, e = d.validateDirectory(*req.Directory, req.Username)
+			directory, e = d.validateDirectory(*req.Directory, req.Username, a.SharedDirectory)
 			if e != nil {
 				writeErr(w, 400, e.Error())
 				return
@@ -236,10 +262,8 @@ func (d *davService) admin(w http.ResponseWriter, r *http.Request) {
 			a.Directory = directory
 		}
 	}
-	dir := d.store.internal("webdav-users", req.Username)
-	if e = os.MkdirAll(dir, 0700); e != nil {
-		writeErr(w, 500, "cannot create account configuration")
-		return
+	if a.Directory == "" && key != req.Username {
+		a.Directory = filepath.Join(d.store.Root, "webdav", key)
 	}
 	if a.Directory == "" {
 		e = os.MkdirAll(d.accountDirectory(a), 0700)
@@ -248,11 +272,16 @@ func (d *davService) admin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, "cannot create account storage")
 		return
 	}
-	if a.Directory == "" {
-		if _, e = d.validateDirectory(d.accountDirectory(a), a.Username); e != nil {
+	{
+		if _, e = d.validateDirectory(d.accountDirectory(a), a.Username, a.SharedDirectory); e != nil {
 			writeErr(w, 400, e.Error())
 			return
 		}
+	}
+	dir := d.store.internal("webdav-users", key)
+	if e = os.MkdirAll(dir, 0700); e != nil {
+		writeErr(w, 500, "cannot create account configuration")
+		return
 	}
 	n, e := nextVersion(dir)
 	if e == nil {
@@ -374,7 +403,6 @@ func (d *davService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		names = append(names, strings.TrimPrefix(u.Path, prefix))
 	}
-	gate, locks := d.resources(user)
 	// RFC 4918 defaults Overwrite to T. x/net's MOVE still tests == "T",
 	// unlike COPY; normalize the omitted header as rclone also does (#66059).
 	if (r.Method == "COPY" || r.Method == "MOVE") && r.Header.Get("Overwrite") == "" {
@@ -386,6 +414,7 @@ func (d *davService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "account unavailable", 503)
 		return
 	}
+	gate, locks := d.resources(user)
 	if account.Disabled || (public && !account.Anonymous) {
 		http.NotFound(w, r)
 		return

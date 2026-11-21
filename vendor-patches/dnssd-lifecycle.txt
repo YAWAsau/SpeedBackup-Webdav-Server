@@ -1,0 +1,46 @@
+dnssd v1.2.14 (MIT), vendored for reproducible builds.
+Reviewed all 7 open upstream PRs on 2026-11-07.
+Included:
+#66 IP deduplication (global and per-interface lists; IP.Equal handles IPv4 encodings).
+#70 Preserve a service-name conflict across subsequent packets.
+#71 Distinguish responses from simultaneous probe queries for host conflicts.
+Skipped:
+#64 Browser cache refresh: not used by this announcer; earliestExpiry only moves earlier on refresh, leaving stale deadlines; requires further work.
+#62 CLI TXT flag: we call Config.Text directly and do not ship upstream CLI.
+#54 Upstream build/release workflow: existing SpeedBackup CI builds Windows/Linux; workflow is not a runtime fix.
+#21 Browser unicast query API: unused and based on obsolete API names.
+Additional local fixes:
+- Always close sockets and withdraw already-registered services when later probing is cancelled.
+- Parent-owned cancellable announcement timers and reprobe workers; stop launches under mutex, wait for workers, then take locked service snapshot and send goodbye. No mutex is held across announcement timers.
+- Cancel blocked receive-channel delivery; recognize all context completion reasons; unpack only bytes received.
+- Only announce the newly registered service rather than re-announcing all prior services on every registration.
+- Same hostname but different SRV port/priority/weight is not our own record.
+See combined.patch for exact changes against v1.2.14 (including focused regression tests).
+To regenerate vendor: go mod vendor; then git apply --ignore-space-change vendor-patches/combined.patch.
+Focused upstream tests: go test -vet=off ./vendor/github.com/brutella/dnssd -run 'TestProbeHostConflict|TestProbeServiceNameConflictIsKept|TestDenyingAs|TestSpeedBackup'
+-vet=off applies only to upstream tests (an unchanged upstream test calls t.Fatal in a goroutine).
+Application go test ./... and go vet ./... run normally.
+
+https://github.com/brutella/dnssd/pull/66 commit e76d8cc9dc78b6bd1e9567911ad3d07c070c5a1e
+
+https://github.com/brutella/dnssd/pull/70 commit 65fe9a9900edd67971e780ef56d86a2f8706570b
+
+https://github.com/brutella/dnssd/pull/71 commit 1ac329ad2267ba6b90a28af3c4e7aef43c423402
+
+Claude CLI review (2026-11-07): initial F1/F2/F3 addressed in discovery3; see speedbackup_lifecycle_test.go (32 concurrent announcements, cancellation and reprobe shutdown). F5 stopped-state writes now take mutex. F4 upstream IPv4 send error overwrite remains a low-priority diagnostic limitation. Native race detector not run: Windows C compiler unavailable.
+
+Additional verified isolation fix: handleQuery skips services not visible on the receiving interface. TestSpeedBackupQueryStaysOnSelectedInterface covers both rejected and accepted interfaces.
+
+Second Claude review confirmed F1/F2/F3 core fixes. Follow-up disposition:
+P1 UpdateText untracked goroutine, P3 Remove delay, P4 runtime Add blocking: upstream APIs not called by SpeedBackup. Adapter adds all services BEFORE Respond and discards handles. These remain upstream limitations, not certified fixed.
+P2 query jitter: retained RFC shared-response jitter, made cancellation-aware and skip remaining query batch on cancellation. Regression test added.
+P4 initial probing: performed before responder event loop; parent cancellation propagates. No claim of immediate startup while probing.
+U1/U2: context written before worker launch; reviewer acknowledged happens-before safety. No concurrent Respond reuse supported by adapter.
+No claim that the whole upstream library or all platforms passed audit.
+
+Discovery5 Windows multicast compatibility:
+- x/net Windows ignores packet ControlMessage.IfIndex: explicitly select the multicast socket interface under writeMu, and scope IPv6 destinations.
+- Without receive interface metadata, retain all eligible same-subnet interfaces instead of only the first. Clone each DNS message to avoid cross-request mutation; service visibility still restricts replies.
+- Preserve both IPv4/IPv6 send errors (errors.Join), and report DNS packing errors.
+- speedbackup_windows_test.go verifies socket egress selection and all shared-subnet candidates on actual host interfaces.
+Root diagnosis: Windows->Android HTTP worked on both NICs while original discovery4 advertised no usable service; explicit Windows egress fixed basic discovery. Android no-MulticastLock intermittent reception is separately under investigation in the phone project.

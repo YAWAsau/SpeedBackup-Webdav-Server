@@ -328,7 +328,7 @@ func (s *HTTPServer) powerComplete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 202, p.job)
 }
 func validPowerTheme(v map[string]string) bool {
-	choices := map[string]string{"theme": "|system|dark|black|white|", "accent": "|blue|teal|violet|", "surface": "|classic|glass|", "density": "|comfortable|compact|", "motion": "|system|reduce|"}
+	choices := map[string]string{"theme": "|system|dark|black|white|space|", "accent": "|blue|teal|violet|", "surface": "|classic|glass|miuix|", "density": "|comfortable|compact|", "motion": "|system|full|reduce|"}
 	if len(v) != len(choices) {
 		return false
 	}

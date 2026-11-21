@@ -156,11 +156,10 @@
     $('settingsLocale').value=S.locale;$('settingsLocale').onchange=e=>setLocale(e.target.value);
     const themeLabel=$('settingsThemeLabel');
     const appearance=document.createElement('div');appearance.className='appearance-options';
-    appearance.innerHTML=`<div class="theme-previews" role="group" aria-labelledby="settingsThemeLabel">${[['system','系統','系统'],['dark','深色','深色'],['black','深黑','深黑'],['white','白色','白色']].map(([value,tw,cn])=>`<button type="button" class="theme-choice" data-preview="${value}" aria-pressed="false"><span class="theme-sample" aria-hidden="true"><i></i><i></i></span>${say(tw,cn)}</button>`).join('')}</div>
-    <label class="field-label" for="settingsSurface">${say('介面材質','界面材质')}</label><select class="select" id="settingsSurface" aria-describedby="surfaceHint"><option value="classic">${say('經典（無玻璃效果）','经典（无玻璃效果）')}</option><option value="glass">${say('液態玻璃','液态玻璃')}</option></select><p id="surfaceHint" class="muted tiny">${say('柔和透光與高光邊緣；搭配任一主題。選擇經典可關閉效果。','柔和透光与高光边缘；搭配任一主题。选择经典可关闭效果。')}</p>
+    appearance.innerHTML=`<div class="theme-previews" role="group" aria-labelledby="settingsThemeLabel">${[['system','系統','系统'],['dark','深色','深色'],['black','深黑','深黑'],['white','白色','白色'],['space','動態星空','动态星空']].map(([value,tw,cn])=>`<button type="button" class="theme-choice" data-preview="${value}" aria-pressed="false"><span class="theme-sample" aria-hidden="true"><i></i><i></i></span>${say(tw,cn)}</button>`).join('')}</div>
+    <label class="field-label" for="settingsSurface">${say('介面風格','界面风格')}</label><select class="select" id="settingsSurface" aria-describedby="surfaceHint"><option value="classic">${say('經典（無玻璃效果）','经典（无玻璃效果）')}</option><option value="glass">${say('液態玻璃','液态玻璃')}</option><option value="miuix">miuix</option></select><p id="surfaceHint" class="muted tiny">${say('經典、液態玻璃或 miuix 圓角分組；皆可搭配明暗主題與強調色。','经典、液态玻璃或 miuix 圆角分组；均可搭配明暗主题与强调色。')}</p>
     <label class="field-label" for="settingsAccent">${say('強調色','强调色')}</label><select class="select" id="settingsAccent"><option value="blue">${say('藍色','蓝色')}</option><option value="teal">${say('青綠','青绿')}</option><option value="violet">${say('紫色','紫色')}</option></select>
     <label class="field-label" for="settingsDensity">${say('排列密度','排列密度')}</label><select class="select" id="settingsDensity"><option value="comfortable">${say('舒適','舒适')}</option><option value="compact">${say('緊湊（桌面）','紧凑（桌面）')}</option></select>
-    <label class="check-label"><input id="settingsMotion" type="checkbox">${say('減少動畫','减少动画')}</label>
     <p class="muted">${say('外觀立即套用，並自動同步到電腦提示窗；多個管理端以最後同步的外觀為準。手機保留適合觸控的間距。','外观立即应用，并自动同步到电脑提示窗；多个管理端以最后同步的外观为准。手机保留适合触控的间距。')}</p><button class="btn" id="resetAppearance">${say('還原外觀預設','恢复外观默认')}</button><p id="appearanceStatus" role="status" class="muted"></p><p class="muted tiny">OPPO Sans 4.0 · Copyright 2024 Guangdong OPPO Mobile Telecommunications Corp., Ltd. · <a href="/web/admin/OPPO-Sans-LICENSE.txt" target="_blank" rel="noopener">${say('字型授權','字体授权')}</a></p>`;
     // Render short appearance choices in-page, avoiding native popup compositing.
     appearance.querySelectorAll('select').forEach(select=>{
@@ -173,12 +172,11 @@
       select.replaceWith(group);
     });
     themeLabel.after(appearance);
-    const syncAppearance=()=>{const p=SBPreferences.all();appearance.querySelectorAll('[data-preference]').forEach(b=>b.setAttribute('aria-pressed',String(p[b.dataset.preference]===b.dataset.value)));$('settingsMotion').checked=p.motion==='reduce';appearance.querySelectorAll('[data-preview]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.preview===p.theme)));};
+    const syncAppearance=()=>{const p=SBPreferences.all();appearance.querySelectorAll('[data-preference]').forEach(b=>b.setAttribute('aria-pressed',String(p[b.dataset.preference]===b.dataset.value)));appearance.querySelectorAll('[data-preview]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.preview===p.theme)));};
     const appearanceResult=ok=>{syncAppearance();$('appearanceStatus').textContent=ok?say('已套用並儲存','已应用并保存'):say('已套用；瀏覽器禁止儲存，關閉後可能不保留。','已应用；浏览器禁止保存，关闭后可能不保留。');};
     const changeAppearance=values=>appearanceResult(SBPreferences.update(values));
     appearance.querySelectorAll('[data-preview]').forEach(b=>b.onclick=()=>changeAppearance({theme:b.dataset.preview}));
     appearance.querySelectorAll('[data-preference]').forEach(b=>b.onclick=()=>changeAppearance({[b.dataset.preference]:b.dataset.value}));
-    $('settingsMotion').onchange=e=>changeAppearance({motion:e.target.checked?'reduce':'system'});
     $('resetAppearance').onclick=()=>appearanceResult(SBPreferences.reset());syncAppearance();
     const current=()=>generation===davGeneration&&S.page==='settings';
     SBPowerSettings.mount({container:$('content'),api,current,preferences:SBPreferences});
@@ -244,7 +242,7 @@
         }catch(e){if(!closed)dialog.querySelector('.picker-message').textContent=e.message;}
       };
       const launch=document.createElement('a');launch.href=job.launch_url;document.body.appendChild(launch);launch.click();launch.remove();void poll();
-    }catch(e){if(alive()){$('davSaveStatus').textContent=say('原生選擇器無法開啟，已切換網頁瀏覽：','原生选择器无法打开，已切换网页浏览：')+e.message;await chooseDirectory();}}
+    }catch(e){if(alive()){$('davConfigHint').textContent=say('原生選擇器無法開啟，已切換網頁瀏覽：','原生选择器无法打开，已切换网页浏览：')+e.message;await chooseDirectory();}}
     finally{if(alive())button.disabled=false;}
   }
   async function chooseDirectory(){
@@ -310,29 +308,34 @@
     $('content').innerHTML=`
       <div class="section pad"><h3>${say('分享帳號與目錄','共享账号与目录')}</h3><p class="muted">${say('設定手機使用的 WebDAV 地址、帳號與目錄；即時傳輸統一顯示於儀表板。','设置手机使用的 WebDAV 地址、账号与目录；实时传输统一显示于仪表盘。')}</p><button id="backToDashboard" class="btn ghost">${say('查看儀表板','查看仪表盘')}</button></div>
       <div class="share-layout dav-gap">
-       <div class="section pad"><h3>${say('已建立帳號','已创建账号')}</h3><p class="muted">${say('每個帳號使用獨立目錄。管理員與 WebDAV 備份帳號分開；舊備份可放入對應目錄，目錄列舉即時更新。','每个账号使用独立目录。管理员与 WebDAV 备份账号分开；旧备份可放入对应目录，目录列表实时更新。')}</p>
+       <div class="section pad"><h3>${say('已建立帳號','已创建账号')}</h3><p class="muted">${say('帳號預設使用獨立目錄，也可明確啟用共用。管理員與 WebDAV 備份帳號分開；舊備份可放入對應目錄，目錄列舉即時更新。','账号默认使用独立目录，也可明确启用共用。管理员与 WebDAV 备份账号分开；旧备份可放入对应目录，目录列表实时更新。')}</p>
         <div class="codebox">${esc(info.storage)}</div><div id="davAccounts" class="dav-gap"></div><button id="davNew" class="btn ghost dav-gap">${say('新增分享','新增共享')}</button>
         <p class="muted">${say('即時列表保留最近 200 筆及進行中的傳輸；重新啟動後，已完成紀錄仍可在事件日誌查閱。百分比僅針對單一檔案或 Range 請求。','实时列表保留最近 200 条及进行中的传输；重启后，已完成记录仍可在事件日志查阅。百分比仅针对单个文件或 Range 请求。')}</p>
        </div>
        <div class="section pad share-form"><h3>${say('連接腳本','连接脚本')}</h3>
+        <div class="dav-save-banner" id="davSaveBanner" data-state="pending"><span class="dav-save-symbol" aria-hidden="true">●</span><div><div class="tiny">${say('分享設定 · 自動儲存','共享设置 · 自动保存')}</div><p id="davSaveStatus" role="status" aria-live="polite" aria-atomic="true"></p><div class="tiny muted">${say('帳號、目錄與密碼：離開欄位或按 Enter 儲存；勾選項目立即儲存。連接網址僅記在目前瀏覽器。','账号、目录与密码：离开字段或按 Enter 保存；勾选项目立即保存。连接地址仅记在当前浏览器。')}</div></div></div>
         <div class="form-row"><label class="field-label" for="davAddress">webdav_url ${say('（腳本連接地址）','（脚本连接地址）')}</label><div class="form-control-body">
         <input id="davAddress" class="input mono" value="${esc(base)}" spellcheck="false"></div></div>
         ${connection.addresses.length?`<div class="form-row"><label class="field-label" for="davNetwork">${say('偵測到的伺服器 IPv4','检测到的服务器 IPv4')}</label><div class="form-control-body"><select id="davNetwork" class="select"><option value="">${say('保留手動輸入的地址','保留手动输入的地址')}</option>${connection.addresses.map(a=>`<option value="${esc(a.url)}">${esc(a.url)} · ${esc(a.interface)}</option>`).join('')}</select></div></div>`:''}
         <p id="davNetworkHint" class="muted form-note">${connection.loopback_only?say('目前服務僅監聽本機，手機無法連接；請將服務監聽地址改成 0.0.0.0，再重新整理。','当前服务仅监听本机，手机无法连接；请将服务监听地址改为 0.0.0.0，再刷新。'):connection.selection_required?say('此 WebDAV 埠同時監聽多個 IPv4。本機連線無法確定手機使用哪張網卡，請選與手機同網路的地址，或從該區網地址登入以自動確認。','此 WebDAV 端口同时监听多个 IPv4。本机连接无法确定手机使用哪张网卡，请选择与手机同网络的地址，或从该局域网地址登录以自动确认。'):connection.addresses.length?say('地址依 WebDAV 實際監聽埠與目前連線使用的 IPv4 產生。可手動填入自訂網域；外網使用 HTTPS。','地址依 WebDAV 实际监听端口与当前连接使用的 IPv4 生成。可手动填写自定义域名；外网使用 HTTPS。'):say('未取得可用的區網 IPv4，請手動輸入手機可連接的伺服器地址。','未取得可用的局域网 IPv4，请手动输入手机可连接的服务器地址。')}</p>
         <div class="form-row"><label class="field-label" for="davUser">${say('分享名稱／備份帳號','共享名称／备份账号')}</label><div class="form-control-body">
-        <input id="davUser" class="input" value="phone" maxlength="48" autocomplete="off"></div></div>
+        <div class="directory-input"><input id="davUser" class="input" maxlength="48" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="davUserHint"><button id="davNewAccount" class="btn ghost" type="button">${say('新增帳號','新增账号')}</button></div>
+        <p id="davUserHint" class="muted"></p>
+        <button id="davRename" class="btn ghost" type="button">${say('更名此帳號','重命名此账号')}</button>
+        <div id="davRenamePanel" hidden><label for="davRenameName">${say('新帳號名稱','新账号名称')}</label><input id="davRenameName" class="input" maxlength="48" autocapitalize="none" spellcheck="false"><p class="muted">${say('保留原目錄、備份、密碼及設定。更名後舊名稱無法登入，手機須更新帳號；匿名分享網址中的帳號名稱也會改變。','保留原目录、备份、密码及设置。重命名后旧名称无法登录，手机须更新账号；匿名共享地址中的账号名称也会改变。')}</p><button id="davRenameApply" type="button" class="btn primary">${say('確認更名','确认重命名')}</button> <button id="davRenameCancel" type="button" class="btn ghost">${say('取消','取消')}</button><p id="davRenameStatus" role="status"></p></div></div></div>
         <div class="form-row"><label class="field-label" for="davDirectory">${say('分享目錄（伺服器實體路徑）','共享目录（服务器实际路径）')}</label><div class="form-control-body">
         <div class="directory-input"><input id="davDirectory" class="input mono" placeholder="${esc(info.storage)}"><button id="davBrowse" class="btn ghost" title="${say('瀏覽伺服器目錄','浏览服务器目录')}">${say('瀏覽…','浏览…')}</button></div>
         <p class="muted">${say('留空使用預設帳號目錄；自訂路徑須已存在，且服務帳號可讀寫。變更不搬移或刪除原備份。','留空使用默认账号目录；自定义路径须已存在，且服务账号可读写。更改不移动或删除原备份。')}</p></div></div>
+        <div class="form-note"><label class="check-label"><input id="davSharedDirectory" type="checkbox"> ${say('允許與其他帳號共用此目錄','允许与其他账号共用此目录')}</label><p class="muted">${say('共用同一資料夾時，兩個帳號都須勾選。共用帳號可讀寫、覆寫及刪除相同檔案，帳密仍分開。仍不允許父子目錄重疊。','共用同一文件夹时，两个账号都须勾选。共用账号可读写、覆盖及删除相同文件，账号密码仍分开。仍不允许父子目录重叠。')}</p></div>
         <div class="form-note"><label class="check-label"><input id="davAnonymous" type="checkbox"> ${say('匿名分享（腳本不填帳號、密碼）','匿名共享（脚本不填账号、密码）')}</label>
         <p class="muted">${say('開啟後，能連到此匿名網址的人可讀寫這個分享目錄。管理介面仍須登入；關閉匿名分享或停用帳號即停止匿名存取。只有一個匿名分享時可使用根網址；多個分享使用各自網址。','开启后，能连接此匿名地址的人可读写这个共享目录。管理界面仍需登录；关闭匿名共享或停用账号即停止匿名访问。只有一个匿名共享时可使用根地址；多个共享使用各自地址。')}</p></div>
         <div class="form-row"><label class="field-label" for="davPassword">webdav_remote_pass ${say('（密碼；更新帳號時留空可保留）','（密码；更新账号时留空可保留）')}</label><div class="form-control-body">
         <input id="davPassword" class="input" type="password" autocomplete="new-password"></div></div>
         <div class="form-note"><label class="check-label"><input id="davDisabled" type="checkbox"> ${say('停用此帳號（保留備份檔案）','停用此账号（保留备份文件）')}</label>
         <p class="muted tiny">${say('填好後離開欄位或按 Enter 即套用；勾選項目立即套用。','填好后离开字段或按 Enter 即应用；勾选项目立即应用。')}</p>
-        <p id="davSaveStatus" class="muted" role="status"></p></div>
+        </div>
         <div class="form-row"><label class="field-label" for="davScriptConfig">${say('貼入腳本設定檔的對應欄位','粘贴到脚本配置文件的对应字段')}</label><div class="form-control-body">
-        <p class="muted">${say('確認顯示「已套用」後，複製下方設定取代腳本中同名欄位；remote_stream 保持原設定。','确认显示“已应用”后，复制下方配置替换脚本中同名字段；remote_stream 保持原配置。')}</p>
+        <p class="muted">${say('確認顯示「已儲存」後，複製下方設定取代腳本中同名欄位；remote_stream 保持原設定。','确认显示“已保存”后，复制下方配置替换脚本中同名字段；remote_stream 保持原配置。')}</p>
         <textarea id="davScriptConfig" class="input mono" rows="5" readonly spellcheck="false" aria-label="${say('腳本 WebDAV 設定','脚本 WebDAV 配置')}"></textarea>
         <div class="toolbar dav-gap"><label><input id="davShowPassword" type="checkbox"> ${say('顯示設定中的密碼','显示配置中的密码')}</label><button id="davCopy" class="btn ghost">${say('複製腳本設定（含密碼）','复制脚本配置（含密码）')}</button></div>
         <p id="davConfigHint" class="muted" role="status"></p></div></div>
@@ -341,11 +344,22 @@
       </div>`;
     const alive=()=>generation===davGeneration&&S.page==='webdav';
     let knownUsers=info.users||[], lastSavedPassword='';
-    const snapshot=()=>({username:$('davUser').value.trim(),directory:$('davDirectory').value.trim(),anonymous:$('davAnonymous').checked,disabled:$('davDisabled').checked,password:$('davAnonymous').checked?'':$('davPassword').value});
+    function setSaveStatus(state,message){$('davSaveBanner').dataset.state=state;$('davSaveStatus').textContent=message;document.querySelector('#davSaveBanner .dav-save-symbol').textContent=state==='saved'?'✓':state==='error'?'!':state==='saving'?'↻':'●';}
+    function davError(e){
+      if(e.message.includes('directory overlaps'))return say('目錄與其他帳號重疊。共用同一目錄須先在兩個帳號勾選「允許共用」；父子目錄不能共用。','目录与其他账号重叠。共用同一目录须先在两个账号勾选“允许共用”；父子目录不能共用。');
+      if(e.message.includes('account name already exists'))return say('此帳號名稱已存在，請使用其他名稱。','此账号名称已存在，请使用其他名称。');
+      if(e.message.includes('account name is reserved'))return say('此名稱是另一帳號的歷史名稱，請使用其他名稱。','此名称是另一账号的历史名称，请使用其他名称。');
+      return e.message;
+    }
+    const snapshot=()=>({username:$('davUser').value.trim(),directory:$('davDirectory').value.trim(),anonymous:$('davAnonymous').checked,disabled:$('davDisabled').checked,password:$('davAnonymous').checked?'':$('davPassword').value,shared_directory:$('davSharedDirectory').checked});
+    function setAccountMode(existing){
+      $('davUser').readOnly=existing;$('davRename').hidden=!existing;$('davRenamePanel').hidden=true;
+      $('davUserHint').textContent=existing?say('要替此帳號換名稱，請點「更名此帳號」；要建立另一個帳號，請點「新增帳號」。','要替此账号换名称，请点“重命名此账号”；要创建另一个账号，请点“新增账号”。'):say('請輸入新帳號：1–48 個小寫英文字母、數字、底線或連字號，開頭須為字母或數字。例如 phone、backup_2。','请输入新账号：1–48 个小写英文字母、数字、下划线或连字符，开头须为字母或数字。例如 phone、backup_2。');
+    }
     function loadAccount(user){
-      $('davUser').value=user?.username||'';$('davUser').readOnly=!!user;
+      $('davUser').value=user?.username||'';setAccountMode(!!user);
       $('davAnonymous').checked=!!user?.anonymous;$('davDisabled').checked=!!user?.disabled;
-      $('davDirectory').value=user?.custom_directory?user.directory:'';
+      $('davDirectory').value=user?.custom_directory?user.directory:'';$('davSharedDirectory').checked=!!user?.shared_directory;
       $('davPassword').value='';$('davShowPassword').checked=false;
       lastSavedPassword='';
       try{$('davAddress').value=localStorage.getItem('sb_dav_address:'+user?.username)||base;}catch(_){$('davAddress').value=base;}
@@ -360,12 +374,12 @@
         const data=await api('/api/v1/admin/webdav');
         if(!alive())return;
         rootAnonymous=data.root_anonymous_user||'';knownUsers=data.users;drawAccounts();
-        if($('davUser').value.trim()===value.username)$('davUser').readOnly=true;
+        if($('davUser').value.trim()===value.username)setAccountMode(true);
       },
       notify:({saved,busy,error})=>{
         if(!alive())return;
-        $('davSaveStatus').textContent=busy?say('正在套用…','正在应用…'):error?(error.name==='TimeoutError'?error.message:say('未套用：','未应用：')+error.message+say('。修正後離開欄位或按 Enter 重試。','。修正后离开字段或按 Enter 重试。')):saved&&!editor.dirty(snapshot())?say('已套用。','已应用。'):say('待填寫完成。','待填写完成。');
-        $('davNew').disabled=busy;document.querySelectorAll('.dav-account').forEach(b=>b.disabled=busy);
+        setSaveStatus(busy?'saving':error?'error':saved&&!editor.dirty(snapshot())?'saved':'pending',busy?say('儲存中，請稍候…','保存中，请稍候…'):error?say('儲存失敗：','保存失败：')+davError(error)+say('。修正後離開欄位或按 Enter 重試。','。修正后离开字段或按 Enter 重试。'):saved&&!editor.dirty(snapshot())?say('已儲存，伺服器已確認。','已保存，服务器已确认。'):say('尚未儲存，請完成輸入後離開欄位或按 Enter。','尚未保存，请完成输入后离开字段或按 Enter。'));
+        $('davNew').disabled=busy;$('davNewAccount').disabled=busy;document.querySelectorAll('.dav-account').forEach(b=>b.disabled=busy);
         updateShareAddress();
       }
     });shareEditor=editor;
@@ -375,12 +389,36 @@
     }
     function commit(){
       const value=snapshot(),existing=knownUsers.some(u=>u.username===value.username);
-      if(!/^[a-z0-9_-]{1,48}$/.test(value.username)||(!existing&&!value.anonymous&&!value.password.trim())){
-        $('davSaveStatus').textContent=say('待填寫：有效分享名稱，以及密碼或匿名分享。','待填写：有效共享名称，以及密码或匿名共享。');updateConfig();return;
+      if(!/^[a-z0-9][a-z0-9_-]{0,47}$/.test(value.username)){
+        setSaveStatus('pending',say('尚未儲存：帳號須為 1–48 個小寫英文字母、數字、底線或連字號，開頭須為字母或數字。','尚未保存：账号须为 1–48 个小写英文字母、数字、下划线或连字符，开头须为字母或数字。'));updateConfig();return;
       }
-      if(!editor.dirty(value))return;editor.submit(value);
+      if(!$('davUser').readOnly&&existing){
+        setSaveStatus('pending',say('尚未儲存：此帳號已存在，請選取上方既有帳號，或輸入不同的新名稱。','尚未保存：此账号已存在，请选取上方已有账号，或输入不同的新名称。'));updateConfig();return;
+      }
+      if(!existing&&!value.anonymous&&!value.password.trim()){
+        setSaveStatus('pending',say('尚未儲存：請填入有效分享名稱，以及密碼或匿名分享。','尚未保存：请填写有效共享名称，以及密码或匿名共享。'));updateConfig();return;
+      }
+      if(!editor.dirty(value)){if(!editor.busy())setSaveStatus('saved',say('已儲存，伺服器已確認。','已保存，服务器已确认。'));updateConfig();return;}editor.submit(value);
     }
     $('davNew').onclick=()=>{if(editor.busy())return;loadAccount(null);editor.reset(null);updateShareAddress();$('davUser').focus();};
+    $('davNewAccount').onclick=$('davNew').onclick;
+    $('davRename').onclick=()=>{if(editor.busy())return;$('davRenamePanel').hidden=false;$('davRenameName').value=$('davUser').value;$('davRenameStatus').textContent='';$('davRenameName').focus();};
+    $('davRenameCancel').onclick=()=>{$('davRenamePanel').hidden=true;};
+    $('davRenameApply').onclick=async()=>{
+      if(editor.busy()||editor.dirty(snapshot())){$('davRenameStatus').textContent=say('請先完成並儲存目前帳號設定。','请先完成并保存当前账号设置。');return;}
+      const oldName=$('davUser').value,newName=$('davRenameName').value.trim();
+      if(!/^[a-z0-9][a-z0-9_-]{0,47}$/.test(newName)){$('davRenameStatus').textContent=say('名稱格式不正確：小寫字母或數字開頭，最多 48 字。','名称格式不正确：小写字母或数字开头，最多 48 字。');return;}
+      const controls=[...document.querySelectorAll('.share-form input,.share-form button,.share-form select,#davNew,.dav-account')].map(e=>[e,e.disabled]);controls.forEach(([e])=>e.disabled=true);
+      $('davRenameStatus').textContent=say('正在更名…','正在重命名…');
+      try{
+        await api('/api/v1/admin/webdav/rename',{method:'POST',body:{username:oldName,new_username:newName}});
+        const data=await api('/api/v1/admin/webdav');if(!alive())return;
+        knownUsers=data.users;rootAnonymous=data.root_anonymous_user||'';drawAccounts();loadAccount(knownUsers.find(u=>u.username===newName));editor.reset(snapshot());
+        setSaveStatus('saved',say('更名完成，原目錄、備份與密碼已保留；請更新手機連線設定。','重命名完成，原目录、备份与密码已保留；请更新手机连接设置。'));
+      }catch(e){if(alive())$('davRenameStatus').textContent=say('更名失敗：','重命名失败：')+davError(e);}
+      finally{controls.forEach(([e,disabled])=>e.disabled=disabled);if(alive())updateShareAddress();}
+    };
+    $('davSharedDirectory').onchange=commit;
     function scriptConfig(){return SBWebDAV.config($('davAddress').value.trim(),$('davUser').value.trim(),$('davPassword').value,$('davAnonymous').checked,rootAnonymous);}
     function updateConfig(){
       const hint=$('davConfigHint');const anonymous=$('davAnonymous').checked;
@@ -390,7 +428,7 @@
         const config=scriptConfig();
         $('davScriptConfig').value=(anonymous||$('davShowPassword').checked)?config:config.split('\n').slice(0,3).join('\n')+'\n# webdav_remote_pass: '+say('密碼已隱藏；下方複製按鈕會包含完整密碼','密码已隐藏；下方复制按钮会包含完整密码');
         $('davCopy').disabled=$('davDisabled').checked||editor.busy()||editor.dirty(snapshot());
-        hint.textContent=$('davDisabled').checked?say('此帳號已勾選停用，請取消停用並確認已套用後再連接。','此账号已勾选停用，请取消停用并确认已应用后再连接。'):anonymous?say('匿名設定的帳號、密碼會留空；確認上方顯示「已套用」後即可使用。','匿名配置的账号、密码会留空；确认上方显示“已应用”后即可使用。'):say('複製時會包含本次輸入的完整密碼。','复制时会包含本次输入的完整密码。');
+        hint.textContent=$('davDisabled').checked?say('此帳號已勾選停用，請取消停用並確認已套用後再連接。','此账号已勾选停用，请取消停用并确认已应用后再连接。'):anonymous?say('匿名設定的帳號、密碼會留空；確認上方顯示「已儲存」後即可使用。','匿名配置的账号、密码会留空；确认上方显示“已保存”后即可使用。'):say('複製時會包含本次輸入的完整密碼。','复制时会包含本次输入的完整密码。');
       }catch(e){
         $('davCopy').disabled=true;
         const messages={loopback:say('手機不能使用本機或全部網卡的監聽地址，請選擇可連接的 IPv4 或輸入網域。','手机不能使用本机或全部网卡的监听地址，请选择可连接的 IPv4 或输入域名。'),password:say('請輸入此備份帳號的密碼，才能產生完整設定。既有密碼無法反查；輸入密碼並離開欄位後會自動套用。','请输入此备份账号的密码，才能生成完整配置。已有密码无法反查；输入密码并离开字段后会自动应用。'),url:say('請輸入有效的 HTTP／HTTPS WebDAV 地址。','请输入有效的 HTTP／HTTPS WebDAV 地址。'),user:say('請填入有效的備份帳號。','请填写有效的备份账号。'),line:say('腳本設定欄位不可包含換行或 NUL 字元。','脚本配置字段不能包含换行或 NUL 字符。')};
@@ -400,7 +438,7 @@
     }
     function updateShareAddress(){$('davAddress').value=SBWebDAV.shareAddress($('davAddress').value.trim(),$('davUser').value.trim(),$('davAnonymous').checked,rootAnonymous);updateConfig();}
     ['davUser','davPassword','davDirectory'].forEach(id=>{
-      $(id).addEventListener('input',()=>{updateShareAddress();$('davSaveStatus').textContent=say('編輯中，離開欄位或按 Enter 套用。','编辑中，离开字段或按 Enter 应用。');});
+      $(id).addEventListener('input',()=>{updateShareAddress();setSaveStatus('pending',say('尚未儲存：編輯中，離開欄位或按 Enter 儲存。','尚未保存：编辑中，离开字段或按 Enter 保存。'));});
       $(id).addEventListener('change',commit);
       $(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commit();}});
     });
@@ -417,7 +455,7 @@
     $('davBrowse').onclick=()=>browseDirectory(generation);
     $('davCopy').onclick=async()=>{
       const value=scriptConfig();
-      try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(value);}else{const box=document.createElement('textarea');box.value=value;document.body.appendChild(box);box.select();const ok=document.execCommand('copy');box.remove();if(!ok)throw new Error('clipboard unavailable');}toast(t('copied'));}catch(e){$('davSaveStatus').textContent=say('無法存取剪貼簿，請手動複製欄位內容。','无法访问剪贴板，请手动复制字段内容。');}
+      try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(value);}else{const box=document.createElement('textarea');box.value=value;document.body.appendChild(box);box.select();const ok=document.execCommand('copy');box.remove();if(!ok)throw new Error('clipboard unavailable');}toast(t('copied'));}catch(e){$('davConfigHint').textContent=say('無法存取剪貼簿，請手動複製欄位內容。','无法访问剪贴板，请手动复制字段内容。');}
     };
     drawAccounts();editor.reset(knownUsers[0]?snapshot():null);
     $('backToDashboard').onclick=()=>setPage('dashboard');

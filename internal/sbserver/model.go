@@ -1,7 +1,7 @@
 package sbserver
 
 const (
-	ServerVersion  = "0.3.17-webdav18"
+	ServerVersion  = "0.3.18-webdav19-accounts2"
 	ProtocolMajor  = 1
 	ProtocolMinor  = 0
 	ManifestSchema = "speedbackup.server.manifest.v1"
@@ -74,9 +74,11 @@ type AppDetailsAuditResponse struct {
 }
 
 type ServerConfig struct {
-	Schema      string `json:"schema"`
-	TokenSHA256 string `json:"token_sha256"`
-	CreatedUnix int64  `json:"created_unix"`
+	DiscoveryID       string `json:"discovery_id,omitempty"`
+	DiscoveryDisabled bool   `json:"discovery_disabled,omitempty"`
+	Schema            string `json:"schema"`
+	TokenSHA256       string `json:"token_sha256"`
+	CreatedUnix       int64  `json:"created_unix"`
 }
 type CreateSessionRequest struct {
 	DeviceID       string  `json:"device_id"`

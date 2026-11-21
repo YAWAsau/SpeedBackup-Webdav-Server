@@ -46,7 +46,7 @@ func (d *davService) privateDirectory(p string) bool {
 	}
 	return containsDirectory(private, p)
 }
-func (d *davService) validateDirectory(p, user string) (string, error) {
+func (d *davService) validateDirectory(p, user string, shared ...bool) (string, error) {
 	dir, e := canonicalDirectory(p)
 	if e != nil {
 		return "", e
@@ -59,15 +59,15 @@ func (d *davService) validateDirectory(p, user string) (string, error) {
 		return "", fmt.Errorf("share directory must not expose server configuration")
 	}
 	// Distinct accounts keep distinct roots, including aliases through symlinks.
-	entries, e := os.ReadDir(d.store.internal("webdav-users"))
+	entries, e := d.accountNames()
 	if e != nil && !os.IsNotExist(e) {
 		return "", e
 	}
 	for _, v := range entries {
-		if !v.IsDir() || v.Name() == user {
+		if v == user {
 			continue
 		}
-		a, _, e := d.load(v.Name())
+		a, _, e := d.load(v)
 		if e != nil {
 			return "", fmt.Errorf("cannot verify other account directories")
 		}
@@ -76,7 +76,11 @@ func (d *davService) validateDirectory(p, user string) (string, error) {
 			continue
 		}
 		if containsDirectory(other, dir) || containsDirectory(dir, other) {
-			return "", fmt.Errorf("directory overlaps another backup account")
+			exact := containsDirectory(other, dir) && containsDirectory(dir, other)
+			if exact && len(shared) > 0 && shared[0] && a.SharedDirectory {
+				continue
+			}
+			return "", fmt.Errorf("directory overlaps another backup account; identical directories require shared-directory access enabled on both accounts; parent/child overlap is not allowed")
 		}
 	}
 	f, e := os.Open(dir)

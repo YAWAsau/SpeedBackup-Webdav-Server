@@ -23,6 +23,7 @@ func usage() {
 
 Usage:
   speedbackup-server serve --root <path> [--listen 0.0.0.0:8765]
+  speedbackup-server discovery --root <path> --enabled=true|false (server must be stopped)
   speedbackup-server logs --root <path> [--follow] [--lines 20]
   speedbackup-server watch [--url http://127.0.0.1:8765] [--username <admin>] [--interval 1s] [--plain] [--once]
   speedbackup-server debug-export --root <path> [--output <new.zip>]
@@ -46,6 +47,8 @@ func main() {
 	switch os.Args[1] {
 	case "serve":
 		err = runServe(os.Args[2:])
+	case "discovery":
+		err = runDiscovery(os.Args[2:])
 	case "logs":
 		err = runLogs(os.Args[2:])
 	case "watch":
@@ -200,6 +203,12 @@ func runResetToken(args []string) error {
 		return err
 	}
 	cfg := sbserver.ServerConfig{Schema: "speedbackup.server.config.v1", TokenSHA256: sbserver.SHA256Bytes([]byte(token)), CreatedUnix: time.Now().Unix()}
+	if previous, e := store.LoadConfig(); e == nil {
+		cfg.DiscoveryDisabled = previous.DiscoveryDisabled
+		cfg.DiscoveryID = previous.DiscoveryID
+	} else if !os.IsNotExist(e) {
+		return e
+	}
 	if err = store.SaveConfig(cfg); err != nil {
 		return err
 	}
@@ -344,4 +353,27 @@ func runService(args []string) error {
 	default:
 		return fmt.Errorf("unknown service command %q", args[0])
 	}
+}
+
+func runDiscovery(args []string) error {
+	fs := flag.NewFlagSet("discovery", flag.ContinueOnError)
+	root := fs.String("root", "", "existing server data root")
+	enabled := fs.Bool("enabled", true, "enable LAN DNS-SD announcements")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	supplied := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "enabled" {
+			supplied = true
+		}
+	})
+	if *root == "" || !supplied || fs.NArg() != 0 {
+		return fmt.Errorf("--root and --enabled=true|false are required; stop the server first")
+	}
+	if err := sbserver.SetDiscoveryEnabled(*root, *enabled); err != nil {
+		return err
+	}
+	fmt.Printf("LAN discovery enabled=%t; takes effect on next server start.\n", *enabled)
+	return nil
 }

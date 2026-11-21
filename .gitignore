@@ -5,3 +5,5 @@
 *.log
 *.test
 FIRST_RUN_TOKEN.txt
+
+.build-test-python/

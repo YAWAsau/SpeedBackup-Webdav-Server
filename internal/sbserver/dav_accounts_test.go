@@ -137,7 +137,15 @@ func TestDAVRenameCustomAnonymousDisabled(t *testing.T) {
 		t.Fatal(e)
 	}
 	a, _, e := newDAVService(store).load("custom")
-	if e != nil || a.Directory != dir || !a.Anonymous || !a.Disabled {
+	if e != nil || !a.Anonymous || !a.Disabled {
 		t.Fatalf("settings lost: %+v %v", a, e)
+	}
+	want, err := os.Stat(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.Stat(a.Directory)
+	if err != nil || !os.SameFile(want, got) {
+		t.Fatalf("custom directory changed: %q -> %q (%v)", dir, a.Directory, err)
 	}
 }
